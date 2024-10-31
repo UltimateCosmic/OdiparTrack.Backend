@@ -4,7 +4,7 @@ using OdiparTrack.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configuración de la conexión a la base de datos
+// Configuraciï¿½n de la conexiï¿½n a la base de datos
 var connectionString = builder.Configuration.GetConnectionString("OdiparTrackDB");
 builder.Services.AddDbContext<OdiparTrackContext>(options =>
     options.UseSqlServer(connectionString));
@@ -33,7 +33,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
