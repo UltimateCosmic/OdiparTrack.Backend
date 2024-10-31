@@ -1,0 +1,134 @@
+************* ENVIOS *************
+
+{{baseUrl}}/api/envio/crear
+
+{
+    "TiempoSalida": "2024-11-01T09:00:00",
+    "TiempoLlegada": "2024-11-01T15:00:00",
+    "CapacidadRestante": 50,
+    "IdCamion": 1
+}
+
+{{baseUrl}}/api/envio/actualizar
+
+{
+    "Id": 3,
+    "TiempoSalida": "2024-11-02T10:00:00",
+    "TiempoLlegada": "2024-11-02T16:00:00",
+    "CapacidadRestante": 40,
+    "IdCamion": 1
+}
+
+************* CAMIONES *************
+
+{{baseUrl}}/api/camion/crear
+
+{
+    "Codigo": "CAM-001",
+    "IdOrigen": 1,
+    "Capacidad": 10000,
+    "TiempoNuevoEnvio": "2024-11-01T10:00:00"
+}
+
+{{baseUrl}}/api/camion/actualizar
+
+{
+    "Id": 7,
+    "Codigo": "CAM-001-Updated",
+    "IdOrigen": 2,
+    "Capacidad": 12000,
+    "TiempoNuevoEnvio": "2024-11-02T12:00:00"
+}
+
+************* OFICINA *************
+
+{{baseUrl}}/api/oficina/crear
+
+{
+    "Capacidad": 100,
+    "Latitud": -12.046374,
+    "Longitud": -77.042793,
+    "Region": "Lima",
+    "Departamento": "Lima",
+    "Provincia": "Lima"
+}
+
+{{baseUrl}}/api/oficina/actualizar
+
+{
+    "Id": 5,
+    "Capacidad": 150,
+    "Latitud": -12.046374,
+    "Longitud": -77.042793,
+    "Region": "Lima Metropolitana",
+    "Departamento": "Lima",
+    "Provincia": "Lima"
+}
+
+************* PEDIDO *************
+
+{{baseUrl}}/api/pedido/crear
+
+{
+    "Id": 1,
+    "IdOrigen": 1,
+    "IdDestino": 3,
+    "Cantidad": 100,
+    "Cliente": "Cliente Actualizado",
+    "IdEnvio": 4
+}
+
+{{baseUrl}}/api/pedido/actualizar
+
+{
+    "Id": 2,
+    "IdOrigen": 1,
+    "IdDestino": 2,
+    "Cantidad": 200,
+    "Cliente": "Cliente Actualizado",
+    "IdEnvio": 4
+}
+
+
+************* RUTA *************
+
+{{baseUrl}}/api/ruta/crear
+
+{
+    "IdOrigen": 1,
+    "IdDestino": 2,
+    "Distancia": 150.75
+}
+
+{{baseUrl}}/api/ruta/actualizar
+
+{
+    "Id": 1,
+    "IdOrigen": 2,
+    "IdDestino": 2,
+    "Distancia": 250.75
+}
+
+************* BLOQUEO *************
+
+{{baseUrl}}/api/bloqueo/crear
+
+{
+    "FechaInicio": "2024-11-01T08:00:00",
+    "FechaFin": "2024-11-02T18:00:00",
+    "IdRuta": 1
+}
+
+{{baseUrl}}/api/bloqueo/actualizar
+
+{
+    "Id": 2,
+    "FechaInicio": "2024-11-02T08:00:00",
+    "FechaFin": "2024-11-03T18:00:00",
+    "IdRuta": 1
+}
+
+
+
+
+
