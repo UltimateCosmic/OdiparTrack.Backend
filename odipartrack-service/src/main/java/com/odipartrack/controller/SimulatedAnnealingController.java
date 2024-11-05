@@ -16,7 +16,7 @@ public class SimulatedAnnealingController {
     private SimulatedAnnealingService simulatedAnnealingService;
 
     @GetMapping("/best-solution")
-    public List<Envio> getBestSolution() {
-        return simulatedAnnealingService.getBestSolution();
+    public List<Envio> getBestSolution(List<Sale> sales, List<Route> routes, List<Office> offices, List<Velocidad> velocidades, List<Block> bloqueos) {
+        return simulatedAnnealingService.getBestSolution(sales, routes, offices, velocidades, bloqueos);
     }
 }
