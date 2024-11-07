@@ -4,7 +4,6 @@ import com.odipartrack.model.*;
 import java.util.*;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-// Clase que representa el algoritmo de Dijkstra y su uso en la búsqueda de rutas
 
 public class SimulatedAnnealing {
 
@@ -208,13 +207,13 @@ public class SimulatedAnnealing {
                 }
 
                 // Estimar la hora de llegada
-                LocalDateTime tiempoLlegadaEstimado = ultimoTiempo.plusHours((long) nuevaDemora);
+                LocalDateTime tiempoLlegadaEstimado = safePlusHours(ultimoTiempo, (long) nuevaDemora);
 
                 // Calcular el menor tiempo límite del primer pedido
                 LocalDateTime menorTiempoLimite = tiempoLimite;
                 if (!pedidos.isEmpty()) {
                     Sale primerPedido = pedidos.get(0);
-                    LocalDateTime tiempoLimitePrimerPedido = primerPedido.getDateTime().plusHours(24);
+                    LocalDateTime tiempoLimitePrimerPedido = safePlusHours(primerPedido.getDateTime(), (long) 24);
                     if (tiempoLimitePrimerPedido.isBefore(menorTiempoLimite)) {
                         menorTiempoLimite = tiempoLimitePrimerPedido;
                     }
@@ -224,7 +223,7 @@ public class SimulatedAnnealing {
                 if (tiempoLlegadaEstimado.isBefore(menorTiempoLimite) && envio.getCapacidadRestante() >= sale.getQuantity()) {
                     envio.setTiempoLlegada(tiempoLlegadaEstimado);
                     envio.setDemora(nuevaDemora); // Actualizar la demora
-                    envio.getCamion().setFechaSalida(tiempoLlegadaEstimado.plusHours(2));
+                    envio.getCamion().setFechaSalida(safePlusHours(tiempoLlegadaEstimado, (long) 2));
                     // Actualizar salida_minima
                     if (!tramoExistente) {
                         envio.getCamion().getDem_Pedidos().add(nuevaDemora);
@@ -288,16 +287,16 @@ public class SimulatedAnnealing {
                 double velocidad = obtenerVelocidad(nuevoCamion.getInicio().getRegion(), sale.getDestination().getRegion());
                 double tiempoLlegada = distancia / velocidad;
                 double nuevaDemora = tiempoLlegada;
-                LocalDateTime tiempoLlegadaEstimado = sale.getDateTime().plusHours((long) nuevaDemora);
+                LocalDateTime tiempoLlegadaEstimado = safePlusHours(sale.getDateTime(), (long) nuevaDemora);
 
-                LocalDateTime tiempoLimitePrimerPedido = sale.getDateTime().plusHours(24);
+                LocalDateTime tiempoLimitePrimerPedido = safePlusHours(sale.getDateTime(), (long) 24);
 
                 // Verificar si llega antes del tiempo límite y tiene capacidad suficiente
                 if (tiempoLlegadaEstimado.isBefore(tiempoLimitePrimerPedido) && nuevoEnvio.getCapacidadRestante() >= sale.getQuantity()) {
                     // Asignar tiempos y demora al nuevo envío
                     nuevoEnvio.setTiempoLlegada(tiempoLlegadaEstimado);
                     nuevoEnvio.setDemora(nuevaDemora);
-                    nuevoEnvio.getCamion().setFechaSalida(tiempoLlegadaEstimado.plusHours(2));
+                    nuevoEnvio.getCamion().setFechaSalida(safePlusHours(tiempoLlegadaEstimado, (long) 2));
                     nuevoCamion.getDem_Pedidos().add(nuevaDemora); // Inicializar la lista de demoras con la nueva demora
                     nuevoCamion.getDist_Pedidos().add(distancia); // Inicializar la lista de distancias con la nueva demora
                     nuevoCamion.getRutas().addAll(result.getValue()); // Agregar las rutas al camión
@@ -316,11 +315,11 @@ public class SimulatedAnnealing {
     private LocalDateTime calcularTiempoLimite(LocalDateTime tiempoBase, String region) {
         switch (region) {
             case "COSTA":
-                return tiempoBase.plusHours(24);
+                return safePlusHours(tiempoBase, (long) 24);
             case "SIERRA":
-                return tiempoBase.plusHours(48);
+                return safePlusHours(tiempoBase, (long) 48);
             case "SELVA":
-                return tiempoBase.plusHours(72);
+                return safePlusHours(tiempoBase, (long) 72);
             default:
                 throw new IllegalArgumentException("Región desconocida: " + region);
         }
@@ -445,7 +444,7 @@ public class SimulatedAnnealing {
                 // Verificar si el camión actual cumple con las condiciones
                 if ((camionActual.getFechaSalida() == null || camionActual.getFechaSalida().isBefore(envio.getTiempoSalida()))
                         && camionActual.getCapacidad() >= envio.getCapacidadRestante()) {
-                    camionActual.setFechaSalida(envio.getTiempoLlegada().plusHours(2));
+                    camionActual.setFechaSalida(safePlusHours(envio.getTiempoLlegada(), (long) 2));
                     camion_final = camionActual;
                     camionAsignado = true;
 
@@ -473,7 +472,7 @@ public class SimulatedAnnealing {
                             if (origen.equals(camion.getInicio())) {
                                 // Sumar todos los valores de la lista dem_Pedidos del camión
                                 tiempoTotal = camion.getDem_Pedidos().get(camion.getDem_Pedidos().size() - 1);
-                                camion.setFechaSalida(envio.getTiempoLlegada().plusHours((long) 2));
+                                camion.setFechaSalida(safePlusHours(envio.getTiempoLlegada(), (long) 2));
                                 camion_final = camion;
                             } else {
                                 Sale primerPedido = envio.getCamion().getPedidos().get(0);
@@ -497,10 +496,10 @@ public class SimulatedAnnealing {
                                     envio.getCamion().getDist_Pedidos().set(j, distancia);
                                 }
                                 // Calcular la distancia entre el origen del camión y el destino del primer pedido
-                                LocalDateTime tiempoLlegadaEstimado = envio.getTiempoSalida().plusHours((long) tiempoTotal);
+                                LocalDateTime tiempoLlegadaEstimado = safePlusHours(envio.getTiempoSalida(), (long) tiempoTotal);
                                 envio.setTiempoLlegada(tiempoLlegadaEstimado);
-                                nuevoCamion.setFechaSalida(tiempoLlegadaEstimado.plusHours(2));
-                                camion.setFechaSalida(tiempoLlegadaEstimado.plusHours(2));
+                                nuevoCamion.setFechaSalida(safePlusHours(tiempoLlegadaEstimado, (long) 2));
+                                camion.setFechaSalida(safePlusHours(tiempoLlegadaEstimado, (long) 2));
                                 envio.setDemora(tiempoTotal);
                                 camion_final = camion;
                             }
@@ -721,11 +720,11 @@ public class SimulatedAnnealing {
             origen = pedido.getDestination();
         }
 
-        LocalDateTime tiempoLlegadaEstimado = tiempoSalida.plusHours((long) demoraAcumulada);
+        LocalDateTime tiempoLlegadaEstimado = safePlusHours(tiempoSalida, (long) demoraAcumulada);
         envio.setTiempoSalida(tiempoSalida);
         envio.setTiempoLlegada(tiempoLlegadaEstimado);
         envio.setDemora(demoraAcumulada);
-        camion.setSalida_minima(tiempoLlegadaEstimado.plusHours(2));
+        camion.setSalida_minima(safePlusHours(tiempoLlegadaEstimado, (long) 2));
 
         // Buscar los siguientes envíos con el mismo código de camión
         /*
@@ -807,7 +806,7 @@ public class SimulatedAnnealing {
                         sale.getDestination().getUbigeo(),
                         sale.getQuantity(),
                         sale.getDateTime(),
-                        envio.getTiempoSalida().plusHours(demoras.get(j).longValue()));
+                        safePlusHours(envio.getTiempoSalida(), (long) demoras.get(j).longValue()));
             }
         }
     }
@@ -882,5 +881,18 @@ public class SimulatedAnnealing {
             }
         }
         return null;
+    }
+
+    private LocalDateTime safePlusHours(LocalDateTime dateTime, long hoursToAdd) {
+        // Limita el valor máximo para evitar EpochDay fuera de rango
+        long maxHours = ChronoUnit.HOURS.between(dateTime, LocalDateTime.MAX);
+        long safeHoursToAdd = Math.min(hoursToAdd, maxHours);
+        return dateTime.plusHours(safeHoursToAdd);
+    }
+    
+    private LocalDateTime safePlusDays(LocalDateTime dateTime, long daysToAdd) {
+        long maxDays = ChronoUnit.DAYS.between(dateTime, LocalDateTime.MAX);
+        long safeDaysToAdd = Math.min(daysToAdd, maxDays);
+        return dateTime.plusDays(safeDaysToAdd);
     }
 }

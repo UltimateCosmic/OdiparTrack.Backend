@@ -1,11 +1,13 @@
 package com.odipartrack.controller;
 
+import com.odipartrack.dto.*;
 import com.odipartrack.model.*;
 import com.odipartrack.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import java.util.List;
 
 @RestController
@@ -15,8 +17,14 @@ public class SimulatedAnnealingController {
     @Autowired
     private SimulatedAnnealingService simulatedAnnealingService;
 
-    @GetMapping("/best-solution")
-    public List<Envio> getBestSolution(List<Sale> sales, List<Route> routes, List<Office> offices, List<Velocidad> velocidades, List<Block> bloqueos) {
-        return simulatedAnnealingService.getBestSolution(sales, routes, offices, velocidades, bloqueos);
+    @PostMapping("/best-solution")
+    public List<Envio> getBestSolution(@RequestBody SimulatedAnnealingRequest request) {
+        return simulatedAnnealingService.getBestSolution(
+            request.getSales(),
+            request.getRoutes(),
+            request.getOffices(),
+            request.getVelocidades(),
+            request.getBloqueos()
+        );
     }
 }
