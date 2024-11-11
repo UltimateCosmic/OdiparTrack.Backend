@@ -16,6 +16,7 @@ builder.Services.AddScoped<OficinaService>();
 builder.Services.AddScoped<RutaService>();
 builder.Services.AddScoped<PedidoService>();
 builder.Services.AddScoped<BloqueoService>();
+builder.Services.AddScoped<VelocidadService>();
 
 // Add services to the container.
 

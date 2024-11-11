@@ -13,7 +13,7 @@ namespace OdiparTrack.Services
             _configuration = configuration;
         }
 
-        public async Task InsertarOficina(int capacidad, decimal latitud, decimal longitud, string region, string departamento, string provincia)
+        public async Task InsertarOficina(string ubigeo, int capacidad, decimal latitud, decimal longitud, string region, string departamento, string provincia)
         {
             using (MySqlConnection conn = new MySqlConnection(_configuration.GetConnectionString("OdiparTrackDB")))
             {
@@ -23,6 +23,7 @@ namespace OdiparTrack.Services
                     cmd.CommandType = System.Data.CommandType.StoredProcedure;
 
                     // Agregar parámetros al Stored Procedure
+                    cmd.Parameters.AddWithValue("pUBIGEO", ubigeo);
                     cmd.Parameters.AddWithValue("pCapacidad", capacidad);
                     cmd.Parameters.AddWithValue("pLatitud", latitud);
                     cmd.Parameters.AddWithValue("pLongitud", longitud);
@@ -93,6 +94,7 @@ namespace OdiparTrack.Services
                             var oficina = new Oficina
                             {
                                 Id = reader.GetInt32("id"),
+                                Ubigeo = reader.GetString("UBIGEO"),
                                 Capacidad = reader.IsDBNull("Capacidad") ? (int?)null : reader.GetInt32("Capacidad"),
                                 Latitud = reader.IsDBNull("Latitud") ? (decimal?)null : reader.GetDecimal("Latitud"),
                                 Longitud = reader.IsDBNull("Longitud") ? (decimal?)null : reader.GetDecimal("Longitud"),

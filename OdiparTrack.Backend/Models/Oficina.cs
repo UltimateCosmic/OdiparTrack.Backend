@@ -5,6 +5,7 @@ namespace OdiparTrack.Models
     public class Oficina
     {
         public int Id { get; set; }
+        public string Ubigeo { get; set; }
         public int? Capacidad { get; set; }
         public decimal? Latitud { get; set; }
         public decimal? Longitud { get; set; }

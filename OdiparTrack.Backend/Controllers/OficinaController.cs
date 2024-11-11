@@ -23,6 +23,7 @@ namespace OdiparTrack.Controllers
             try
             {
                 await _oficinaService.InsertarOficina(
+                    oficina.Ubigeo,
                     oficina.Capacidad.Value,
                     oficina.Latitud.Value,
                     oficina.Longitud.Value,

@@ -13,7 +13,7 @@ namespace OdiparTrack.Services
             _configuration = configuration;
         }
 
-        public async Task InsertarRuta(int idOrigen, int idDestino, decimal distancia)
+        public async Task InsertarRuta(string idOrigen, string idDestino, decimal distancia)
         {
             using (MySqlConnection conn = new MySqlConnection(_configuration.GetConnectionString("OdiparTrackDB")))
             {
@@ -32,7 +32,7 @@ namespace OdiparTrack.Services
             }
         }
 
-        public async Task ActualizarRuta(int idRuta, int idOrigen, int idDestino, decimal distancia)
+        public async Task ActualizarRuta(int idRuta, string idOrigen, string idDestino, decimal distancia)
         {
             using (MySqlConnection conn = new MySqlConnection(_configuration.GetConnectionString("OdiparTrackDB")))
             {
@@ -70,8 +70,8 @@ namespace OdiparTrack.Services
                             var ruta = new Ruta
                             {
                                 Id = reader.GetInt32("id"),
-                                IdOrigen = reader.GetInt32("idOrigen"),
-                                IdDestino = reader.GetInt32("idDestino"),
+                                IdOrigen = reader.GetString("idOrigen"),
+                                IdDestino = reader.GetString("idDestino"),
                                 Distancia = reader.IsDBNull("Distancia") ? (decimal?)null : reader.GetDecimal("Distancia")
                             };
 
