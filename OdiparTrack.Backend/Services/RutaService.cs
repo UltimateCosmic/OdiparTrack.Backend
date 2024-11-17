@@ -32,7 +32,7 @@ namespace OdiparTrack.Services
             }
         }
 
-        public async Task ActualizarRuta(int idRuta, string idOrigen, string idDestino, decimal distancia)
+        public async Task ActualizarRuta(int idRuta, string idOrigen, string idDestino, decimal distancia, int idVelocidad)
         {
             using (MySqlConnection conn = new MySqlConnection(_configuration.GetConnectionString("OdiparTrackDB")))
             {
@@ -46,6 +46,7 @@ namespace OdiparTrack.Services
                     cmd.Parameters.AddWithValue("pIdOrigen", idOrigen);
                     cmd.Parameters.AddWithValue("pIdDestino", idDestino);
                     cmd.Parameters.AddWithValue("pDistancia", distancia);
+                    cmd.Parameters.AddWithValue("pIdVelocidad", idVelocidad);
 
                     await cmd.ExecuteNonQueryAsync();  // Ejecuta el Stored Procedure
                 }

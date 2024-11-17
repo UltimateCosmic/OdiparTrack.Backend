@@ -10,5 +10,6 @@ namespace OdiparTrack.Models
         public string IdDestino { get; set; }
         public Oficina? Destino { get; set; }
         public decimal? Distancia { get; set; }
+        public int? IdVelocidad { get; set; }
     }
 }

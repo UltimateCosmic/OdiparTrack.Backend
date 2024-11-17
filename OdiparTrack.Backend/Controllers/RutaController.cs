@@ -46,7 +46,8 @@ namespace OdiparTrack.Controllers
                     ruta.Id,
                     ruta.IdOrigen,
                     ruta.IdDestino,
-                    ruta.Distancia.Value
+                    ruta.Distancia.Value,
+                    ruta.IdVelocidad.Value
                 );
 
                 return Ok(new { success = true, message = "Ruta actualizada satisfactoriamente." });
