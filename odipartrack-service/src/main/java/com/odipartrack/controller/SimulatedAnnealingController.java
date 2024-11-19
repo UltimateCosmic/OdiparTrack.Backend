@@ -1,13 +1,12 @@
 package com.odipartrack.controller;
 
-import com.odipartrack.dto.*;
-import com.odipartrack.model.*;
-import com.odipartrack.service.*;
+import com.odipartrack.dto.SimulatedAnnealingRequest;
+import com.odipartrack.model.Envio;
+import com.odipartrack.service.SimulatedAnnealingService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
@@ -18,14 +17,21 @@ public class SimulatedAnnealingController {
     private SimulatedAnnealingService simulatedAnnealingService;
 
     @PostMapping("/best-solution")
-    public List<Envio> getBestSolution(@RequestBody SimulatedAnnealingRequest request) {
+    public ResponseEntity<List<Envio>> getBestSolution(@RequestBody SimulatedAnnealingRequest request) {
+        if (request.getSales() == null || request.getRoutes() == null || request.getOffices() == null) {
+            return ResponseEntity.badRequest().build(); // Verificar parámetros esenciales
+        }
+
         List<Envio> preprocessedShipments = (request.getEnvios() != null) ? request.getEnvios() : List.of();
-        return simulatedAnnealingService.getBestSolution(
+        List<Envio> bestSolution = simulatedAnnealingService.getBestSolution(
                 request.getSales(),
                 request.getRoutes(),
                 request.getOffices(),
                 request.getVelocidades(),
                 request.getBloqueos(),
-                preprocessedShipments);
+                preprocessedShipments
+        );
+
+        return ResponseEntity.ok(bestSolution);
     }
 }
