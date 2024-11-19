@@ -19,12 +19,13 @@ public class SimulatedAnnealingController {
 
     @PostMapping("/best-solution")
     public List<Envio> getBestSolution(@RequestBody SimulatedAnnealingRequest request) {
+        List<Envio> preprocessedShipments = (request.getEnvios() != null) ? request.getEnvios() : List.of();
         return simulatedAnnealingService.getBestSolution(
-            request.getSales(),
-            request.getRoutes(),
-            request.getOffices(),
-            request.getVelocidades(),
-            request.getBloqueos()
-        );
+                request.getSales(),
+                request.getRoutes(),
+                request.getOffices(),
+                request.getVelocidades(),
+                request.getBloqueos(),
+                preprocessedShipments);
     }
 }
