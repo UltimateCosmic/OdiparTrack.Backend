@@ -111,5 +111,40 @@ namespace OdiparTrack.Services
 
             return oficinas;
         }
+
+        public async Task<Oficina> LeerOficinaPorId(int id)
+        {
+            Oficina oficina = null;
+
+            using (MySqlConnection conn = new MySqlConnection(_configuration.GetConnectionString("OdiparTrackDB")))
+            {
+                await conn.OpenAsync();
+                using (MySqlCommand cmd = new MySqlCommand("LeerOficinaPorId", conn))
+                {
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("oficinaId", id);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            oficina = new Oficina
+                            {
+                                Id = reader.GetInt32("id"),
+                                Ubigeo = reader.GetString("UBIGEO"),
+                                Capacidad = reader.IsDBNull("Capacidad") ? (int?)null : reader.GetInt32("Capacidad"),
+                                Latitud = reader.IsDBNull("Latitud") ? (decimal?)null : reader.GetDecimal("Latitud"),
+                                Longitud = reader.IsDBNull("Longitud") ? (decimal?)null : reader.GetDecimal("Longitud"),
+                                Region = reader.IsDBNull("Region") ? null : reader.GetString("Region"),
+                                Departamento = reader.IsDBNull("Departamento") ? null : reader.GetString("Departamento"),
+                                Provincia = reader.IsDBNull("Provincia") ? null : reader.GetString("Provincia")
+                            };
+                        }
+                    }
+                }
+            }
+
+            return oficina;
+        }
     }
 }

@@ -94,5 +94,24 @@ namespace OdiparTrack.Controllers
                 return BadRequest(new { success = false, message = "Error al leer las oficinas." });
             }
         }
+
+        [HttpGet("leer/{id}")]
+        public async Task<IActionResult> LeerOficinaPorId(int id)
+        {
+            try
+            {
+                Oficina oficina = await _oficinaService.LeerOficinaPorId(id);
+                if (oficina == null)
+                {
+                    return NotFound(new { success = false, message = "Oficina no encontrada." });
+                }
+                return Ok(new { success = true, data = oficina });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al leer la oficina");
+                return BadRequest(new { success = false, message = "Error al leer la oficina." });
+            }
+        }
     }
 }
