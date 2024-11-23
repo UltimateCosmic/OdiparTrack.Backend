@@ -3,17 +3,22 @@ package com.odipartrack.model;
 import java.time.LocalDateTime;
 
 public class Block {
-    private Route route;
+    
+    private int id;
     private LocalDateTime start;
     private LocalDateTime end;
-
-    public Block(Route route, LocalDateTime start, LocalDateTime end) {
-        this.route = route;
-        this.start = start;
-        this.end = end;
-    }
+    private int idRoute;
+    private Route route;
 
     // Getters y Setters
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public Route getRoute() {
         return route;
     }
@@ -36,5 +41,13 @@ public class Block {
 
     public void setEnd(LocalDateTime end) {
         this.end = end;
+    }
+
+    public int getIdRoute() {
+        return idRoute;
+    }
+
+    public void setIdRoute(int idRoute) {
+        this.idRoute = idRoute;
     }
 }

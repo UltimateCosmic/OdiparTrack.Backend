@@ -6,14 +6,63 @@ import java.util.ArrayList;
 
 public class Camion {
 
-    private int capacidad;
+    private int id;
     private String codigo;
+    private String idInicio;
     private Office inicio;
-    private List<Route> rutas;
-    private List<Sale> pedidos;
+    private int capacidad;   
+    private LocalDateTime tiempo_nuevo_envio;
+    private List<Sale> pedidos;         // leerPedidos          (antes)     filtrar los que tengan el mismo codigo de camion
+    private List<Route> rutas;          // leerRutasXPedidos    (antes)     filtrar las rutas que tengan alguno de los pedidos
+
+    // Propio del Algoritmo
     private List<Double> dem_Pedidos;
     private List<Double> dist_Pedidos;
     private boolean utilizable;
+    private boolean en_camino;
+    private LocalDateTime salida_minima;
+
+    public Camion() {
+    }
+
+    // Constructor
+    public Camion(int capacidad, String codigo, Office inicio, List<Route> rutas, List<Sale> pedidos) {
+        this.capacidad = capacidad;
+        this.codigo = codigo;
+        this.inicio = inicio;
+        this.rutas = rutas;
+        this.pedidos = pedidos;
+        this.en_camino = false;
+        this.salida_minima = null;
+        this.dem_Pedidos = new ArrayList<>();
+        this.dist_Pedidos = new ArrayList<>();
+        this.setUtilizable(true);
+    }
+
+    // Getters y Setters
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getIdInicio() {
+        return idInicio;
+    }
+
+    public LocalDateTime getTiempoNuevoEnvio() {
+        return tiempo_nuevo_envio;
+    }
+
+    public void setTiempoNuevoEnvio(LocalDateTime tiempo_nuevo_envio) {
+        this.tiempo_nuevo_envio = tiempo_nuevo_envio;
+    }
+
+    public void setIdInicio(String idInicio) {
+        this.idInicio = idInicio;
+    }
 
     public List<Double> getDist_Pedidos() {
         return dist_Pedidos;
@@ -46,24 +95,7 @@ public class Camion {
     public void setDem_Pedidos(List<Double> dem_Pedidos) {
         this.dem_Pedidos = dem_Pedidos;
     }
-    private boolean en_camino;
-    private LocalDateTime salida_minima;
 
-    // Constructor
-    public Camion(int capacidad, String codigo, Office inicio, List<Route> rutas, List<Sale> pedidos) {
-        this.capacidad = capacidad;
-        this.codigo = codigo;
-        this.inicio = inicio;
-        this.rutas = rutas;
-        this.pedidos = pedidos;
-        this.en_camino = false;
-        this.salida_minima = null;
-        this.dem_Pedidos = new ArrayList<>();
-        this.dist_Pedidos = new ArrayList<>();
-        this.setUtilizable(true);
-    }
-
-    // Getters y Setters
     public int getCapacidad() {
         return capacidad;
     }
@@ -126,5 +158,13 @@ public class Camion {
 
     public void setUtilizable(boolean utilizable) {
         this.utilizable = utilizable;
+    }
+
+    public LocalDateTime getTiempo_nuevo_envio() {
+        return tiempo_nuevo_envio;
+    }
+
+    public void setTiempo_nuevo_envio(LocalDateTime tiempo_nuevo_envio) {
+        this.tiempo_nuevo_envio = tiempo_nuevo_envio;
     }
 }

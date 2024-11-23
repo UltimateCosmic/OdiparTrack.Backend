@@ -1,15 +1,18 @@
 package com.odipartrack.model;
 
 public class Office {
+    
+    private int id;
     private String ubigeo;
-    private String department;
-    private String province;
+    private int capacity;
     private double latitude;
     private double longitude;
     private String region;
-    private int capacity;
-
-    public Office(String ubigeo, String department, String province, double latitude, double longitude, String region, int capacity) {
+    private String department;
+    private String province;  
+    
+    public Office(int id, String ubigeo, String department, String province, double latitude, double longitude, String region, int capacity) {
+        this.id = id;
         this.ubigeo = ubigeo;
         this.department = department;
         this.province = province;
@@ -20,6 +23,14 @@ public class Office {
     }
 
     // Getters y Setters
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public String getUbigeo() {
         return ubigeo;
     }

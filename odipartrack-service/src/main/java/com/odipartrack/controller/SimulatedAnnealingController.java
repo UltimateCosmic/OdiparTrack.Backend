@@ -1,11 +1,12 @@
 package com.odipartrack.controller;
 
-import com.odipartrack.dto.SimulatedAnnealingRequest;
-import com.odipartrack.model.Envio;
-import com.odipartrack.service.SimulatedAnnealingService;
+import com.odipartrack.service.*;
+import com.odipartrack.util.DataFiller;
+import com.odipartrack.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PostMapping;
 
 import java.util.List;
 
@@ -16,22 +17,50 @@ public class SimulatedAnnealingController {
     @Autowired
     private SimulatedAnnealingService simulatedAnnealingService;
 
+    @Autowired
+    private SaleService saleService;
+
+    @Autowired
+    private RouteService routeService;
+
+    @Autowired
+    private OfficeService officeService;
+
+    @Autowired
+    private VelocidadService velocidadService;
+
+    @Autowired
+    private BloqueoService bloqueoService;
+
+    @Autowired
+    private CamionService camionService;
+
+    @Autowired
+    private EnvioService envioService;
+
     @PostMapping("/best-solution")
-    public ResponseEntity<List<Envio>> getBestSolution(@RequestBody SimulatedAnnealingRequest request) {
-        if (request.getSales() == null || request.getRoutes() == null || request.getOffices() == null) {
-            return ResponseEntity.badRequest().build(); // Verificar parámetros esenciales
-        }
+    public List<Envio> getBestSolution() {
 
-        List<Envio> preprocessedShipments = (request.getEnvios() != null) ? request.getEnvios() : List.of();
-        List<Envio> bestSolution = simulatedAnnealingService.getBestSolution(
-                request.getSales(),
-                request.getRoutes(),
-                request.getOffices(),
-                request.getVelocidades(),
-                request.getBloqueos(),
-                preprocessedShipments
-        );
+        // Lectura de los datos de la Base de Datos
+        List<Office> offices = officeService.obtenerOficinas();
+        List<Velocidad> velocidades = velocidadService.obtenerVelocidades();
+        List<Block> bloqueos = bloqueoService.obtenerBloqueos(); // Route
+        List<Route> routes = routeService.obtenerRutas(); // Velocidad + Office
+        List<Sale> sales = saleService.obtenerPedidos(); // Camion + Office + Envio
+        List<Envio> envios = envioService.obtenerEnvios(); // Camion
+        List<Camion> camiones = camionService.obtenerCamiones(); // Al final (complicado xd)
 
-        return ResponseEntity.ok(bestSolution);
+        // Llenado de datos
+        DataFiller.fillRouteData(routes, offices, velocidades);
+        DataFiller.fillBlockData(bloqueos, routes);
+        DataFiller.fillSaleData(sales, offices, envios, camiones); // Camiones asignados parcialmente
+        DataFiller.fillCamionData(camiones, offices, sales); // Pedidos asignados
+        DataFiller.fillCamionRoutes(camiones, routes); // Rutas asignadas
+        DataFiller.fillEnvioData(envios, camiones); // Camiones asignados a envíos
+
+        // Ahora asigna camiones completos
+        DataFiller.completeSaleData(sales, camiones);
+
+        return simulatedAnnealingService.getBestSolution(sales, routes, offices, velocidades, bloqueos, camiones, envios);
     }
 }

@@ -3,26 +3,26 @@ package com.odipartrack.model;
 import java.time.LocalDateTime;
 
 public class Envio {
-    private Camion camion;
+
+    private int id;
     private LocalDateTime tiempoSalida;
-    private int capacidadRestante; 
     private LocalDateTime tiempoLlegada;
+    private int capacidadRestante;
+    private int idCamion;
+    private Camion camion;
+
+    // Propio del Algoritmo
     private double demora;
     private double solucion;
 
-    public double getSolucion() {
-        return solucion;
-    }
-
-    public void setSolucion(double solucion) {
-        this.solucion = solucion;
-    }
-
     // Constructor
+    public Envio() {        
+    }
+
     public Envio(Camion camion, LocalDateTime tiempoSalida) {
         this.camion = camion;
         this.tiempoSalida = tiempoSalida;
-        this.demora =0;
+        this.demora = 0;
     }
 
     public Envio(Camion camion, LocalDateTime tiempoSalida, int capacidadRestante, LocalDateTime tiempoLlegada) {
@@ -30,10 +30,18 @@ public class Envio {
         this.tiempoSalida = tiempoSalida;
         this.capacidadRestante = capacidadRestante;
         this.tiempoLlegada = tiempoLlegada;
-        this.demora =0;
+        this.demora = 0;
     }
 
     // Getters y Setters
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public Camion getCamion() {
         return camion;
     }
@@ -72,5 +80,21 @@ public class Envio {
 
     public void setDemora(double demora) {
         this.demora = demora;
+    }
+
+    public double getSolucion() {
+        return solucion;
+    }
+
+    public void setSolucion(double solucion) {
+        this.solucion = solucion;
+    }
+
+    public int getIdCamion() {
+        return idCamion;
+    }
+
+    public void setIdCamion(int idCamion) {
+        this.idCamion = idCamion;
     }
 }
