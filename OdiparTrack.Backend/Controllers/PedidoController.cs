@@ -27,7 +27,7 @@ namespace OdiparTrack.Controllers
                     pedido.IdDestino,
                     pedido.Cantidad.Value,
                     pedido.Cliente,
-                    pedido.IdEnvio
+                    pedido.IdEnvio.Value
                 );
 
                 return Ok(new { success = true, message = "Pedido insertado satisfactoriamente." });
@@ -50,7 +50,7 @@ namespace OdiparTrack.Controllers
                     pedido.IdDestino,
                     pedido.Cantidad.Value,
                     pedido.Cliente,
-                    pedido.IdEnvio
+                    pedido.IdEnvio.Value
                 );
 
                 return Ok(new { success = true, message = "Pedido actualizado satisfactoriamente." });

@@ -11,9 +11,10 @@ namespace OdiparTrack.Models
         public Oficina? Destino { get; set; }
         public int? Cantidad { get; set; }
         public string? Cliente { get; set; }
-        public int IdEnvio { get; set; }
+        public int? IdEnvio { get; set; }
         public Envio? Envio { get; set; }
-        public int IdCamion { get; set; }
+        public int? IdCamion { get; set; }
         public Camion? Camion { get; set; }
+        public DateTime fecha { get; set; }
     }
 }

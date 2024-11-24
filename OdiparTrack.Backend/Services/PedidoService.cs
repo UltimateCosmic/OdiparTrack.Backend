@@ -95,7 +95,9 @@ namespace OdiparTrack.Services
                                 IdDestino = reader.GetInt32("idDestino"),
                                 Cantidad = reader.IsDBNull("Cantidad") ? (int?)null : reader.GetInt32("Cantidad"),
                                 Cliente = reader.GetString("Cliente"),
-                                IdEnvio = reader.GetInt32("idEnvio")
+                                IdEnvio = reader.IsDBNull("idEnvio") ? (int?)null : reader.GetInt32("idEnvio"),
+                                IdCamion = reader.IsDBNull("idCamion") ? (int?)null : reader.GetInt32("idCamion"),
+                                fecha = reader.GetDateTime("Fecha")
                             };
 
                             pedidos.Add(pedido);
