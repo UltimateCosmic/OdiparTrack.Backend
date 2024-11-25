@@ -37,7 +37,7 @@ public class SimulatedAnnealing {
         this.coolingRate = coolingRate;
         this.maxIterations = maxIterations;
         this.random = new Random();
-        this.graph = buildGraph(routes); // Construir el grafo desde las rutas        
+        this.graph = buildGraph(routes); // Construir el grafo desde las rutas
         this.velocidades = velocidades;
         this.envios = envios;
         this.bloqueos = bloqueos;
@@ -54,13 +54,13 @@ public class SimulatedAnnealing {
             }
             if (!offices.contains(route.getOrigin()) || !offices.contains(route.getDestination())) {
                 System.out.println("Oficina no encontrada en el grafo: Origen=" + route.getOrigin().getUbigeo() +
-                                   ", Destino=" + route.getDestination().getUbigeo());
+                        ", Destino=" + route.getDestination().getUbigeo());
             }
             graph.putIfAbsent(route.getOrigin(), new ArrayList<>());
             graph.get(route.getOrigin()).add(route);
         }
         return graph;
-    }    
+    }
 
     public List<Envio> run() {
         double i = 0;
@@ -212,7 +212,6 @@ public class SimulatedAnnealing {
     private Envio findOrCreateEnvio(List<Envio> envios, Sale sale, List<Camion> camiones, int pedidonum) {
         // Calcular el tiempo límite del pedido
         LocalDateTime tiempoLimite = calcularTiempoLimite(sale.getDateTime(), sale.getDestination().getRegion());
-        double a = 0;
 
         // Buscar el primer envío con tiempo de llegada menor al tiempo límite y con
         // capacidad suficiente
@@ -316,9 +315,6 @@ public class SimulatedAnnealing {
         // Si no se encuentra un envío adecuado, crear un nuevo envío
         for (Camion camion : camiones) {
             if (camion.getFechaSalida() == null || camion.getFechaSalida().isBefore(sale.getDateTime())) {
-                if (camion.getCodigo().equals("A001")) {
-                    pedidonum = 33;
-                }
                 Camion nuevoCamion = new Camion(camion.getCapacidad(), camion.getCodigo(), camion.getInicio(),
                         new ArrayList<>(), new ArrayList<>());
                 Envio nuevoEnvio = new Envio(nuevoCamion, null);
@@ -459,17 +455,20 @@ public class SimulatedAnnealing {
     }
 
     private double obtenerVelocidad(String regionOrigen, String regionDestino) {
-        // Normalizamos los nombres de las regiones para hacer las comparaciones más
-        // robustas
+        if (regionOrigen == null || regionDestino == null) {
+            System.out.println("Región de origen o destino es nula.");
+            return 60.0; // Velocidad por defecto
+        }
+
+        // Normalizar los nombres de las regiones para comparaciones más robustas
         String regionOrigenNormalizada = regionOrigen.trim().substring(0, 1).toUpperCase()
                 + regionOrigen.trim().substring(1).toLowerCase();
         String regionDestinoNormalizada = regionDestino.trim().substring(0, 1).toUpperCase()
                 + regionDestino.trim().substring(1).toLowerCase();
 
-        // Buscar la velocidad en la lista cargada
+        // Buscar en la lista global de velocidades
         for (Velocidad velocidad : velocidades) {
-            // Comparamos las regiones de origen y destino en ambas direcciones (región 1 a
-            // región 2 y viceversa)
+            // Comparar regiones de origen y destino en ambas direcciones
             if ((velocidad.getRegion1().equals(regionOrigenNormalizada)
                     && velocidad.getRegion2().equals(regionDestinoNormalizada))
                     || (velocidad.getRegion1().equals(regionDestinoNormalizada)
@@ -1047,5 +1046,5 @@ public class SimulatedAnnealing {
         long maxHours = ChronoUnit.HOURS.between(dateTime, LocalDateTime.MAX);
         long safeHoursToAdd = Math.min(hoursToAdd, maxHours);
         return dateTime.plusHours(safeHoursToAdd);
-    }   
+    }
 }

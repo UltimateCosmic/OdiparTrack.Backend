@@ -56,7 +56,6 @@ public class SimulatedAnnealingController {
         /*
          * -- *** ANTES DE EMPEZAR EJECUCIÓN
          * -- Asignar Distancia
-         * -- Asignar Velocidad
          */
 
         // Planificación de envios (front)

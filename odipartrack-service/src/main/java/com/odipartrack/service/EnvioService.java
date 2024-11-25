@@ -62,6 +62,10 @@ public class EnvioService {
             camion.setIdInicio(rs.getString("OficinaUBIGEO"));
             camion.setCapacidad(rs.getInt("CamionCapacidad"));
             camion.setTiempoNuevoEnvio(rs.getTimestamp("TiempoNuevoEnvio").toLocalDateTime());
+            camion.setSalida_minima(rs.getTimestamp("SalidaMinima").toLocalDateTime());
+            if (rs.getTimestamp("SalidaMinima") != null) {
+                camion.setSalida_minima(rs.getTimestamp("SalidaMinima").toLocalDateTime());
+            }
 
             // Asignar datos de la oficina de origen
             Office inicio = new Office();

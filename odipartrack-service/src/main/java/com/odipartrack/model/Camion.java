@@ -12,15 +12,15 @@ public class Camion {
     private Office inicio;
     private int capacidad;   
     private LocalDateTime tiempo_nuevo_envio;
-    private List<Sale> pedidos;         // leerPedidos          (antes)     filtrar los que tengan el mismo codigo de camion
-    private List<Route> rutas;          // leerRutasXPedidos    (antes)     filtrar las rutas que tengan alguno de los pedidos
+    private List<Sale> pedidos;                 // leerPedidos          (antes)     filtrar los que tengan el mismo codigo de camion
+    private List<Route> rutas;                  // leerRutasXPedidos    (antes)     filtrar las rutas que tengan alguno de los pedidos
+    private LocalDateTime salida_minima;
 
     // Propio del Algoritmo
     private List<Double> dem_Pedidos;
     private List<Double> dist_Pedidos;
     private boolean utilizable;
     private boolean en_camino;
-    private LocalDateTime salida_minima;
 
     public Camion() {
         dem_Pedidos = new ArrayList<>();

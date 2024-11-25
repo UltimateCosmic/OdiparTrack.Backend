@@ -50,6 +50,9 @@ public class CamionService {
             camion.setIdInicio(rs.getString("idOrigen"));
             camion.setCapacidad(rs.getInt("Capacidad"));
             camion.setTiempoNuevoEnvio(rs.getTimestamp("Tiempo_nuevo_envio").toLocalDateTime());
+            if (rs.getTimestamp("SalidaMinima") != null) {
+                camion.setSalida_minima(rs.getTimestamp("SalidaMinima").toLocalDateTime());
+            }
 
             // Asignar datos de la oficina de origen
             Office inicio = new Office();
