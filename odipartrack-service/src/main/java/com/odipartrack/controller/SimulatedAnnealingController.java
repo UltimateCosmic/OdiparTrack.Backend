@@ -4,9 +4,11 @@ import com.odipartrack.service.*;
 import com.odipartrack.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PostMapping;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -38,17 +40,19 @@ public class SimulatedAnnealingController {
     private EnvioService envioService;
 
     @PostMapping("/best-solution")
-    public List<Envio> getBestSolution() {
+    public List<Envio> getBestSolution(@RequestParam("fechaHora") String fechaHora) {
+        // Parsear la fecha y hora del parámetro
+        LocalDateTime startDatetime = LocalDateTime.parse(fechaHora);
 
-        // Lectura de los datos de la Base de Datos
+        // Obtener los datos filtrados por fecha y hora
         List<Office> offices = officeService.obtenerOficinas();
-        List<Velocidad> velocidades = velocidadService.obtenerVelocidades();        
+        List<Velocidad> velocidades = velocidadService.obtenerVelocidades();
         List<Route> routes = routeService.obtenerRutas();
         List<Block> bloqueos = bloqueoService.obtenerBloqueos();
         List<Sale> sales = saleService.obtenerPedidos();
         List<Camion> camiones = camionService.obtenerCamiones();
-        List<Envio> envios = envioService.obtenerEnvios();
-        
+        List<Envio> envios = envioService.obtenerEnviosPorFecha(startDatetime);
+
         return simulatedAnnealingService.getBestSolution(sales, routes, offices, velocidades, bloqueos, camiones, envios);
     }
 }
