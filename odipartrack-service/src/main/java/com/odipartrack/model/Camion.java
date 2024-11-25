@@ -23,6 +23,8 @@ public class Camion {
     private LocalDateTime salida_minima;
 
     public Camion() {
+        dem_Pedidos = new ArrayList<>();
+        dist_Pedidos = new ArrayList<>();
     }
 
     // Constructor

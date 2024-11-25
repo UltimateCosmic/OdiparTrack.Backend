@@ -11,9 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.sql.ResultSetMetaData;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -40,27 +37,16 @@ public class EnvioService {
      * @return Lista de objetos Envio.
      */
     public List<Envio> obtenerEnvios() {
-        return obtenerEnviosPorFecha(null);
-    }
-
-    /**
-     * Llama al Stored Procedure LeerEnviosPorFecha con una fecha de inicio y devuelve los envíos en un rango de 24 horas.
-     *
-     * @param startDate Fecha y hora de inicio para filtrar los envíos.
-     * @return Lista de objetos Envio.
-     */
-    @SuppressWarnings("deprecation")
-    public List<Envio> obtenerEnviosPorFecha(LocalDateTime startDate) {
         // Obtener las listas necesarias directamente desde los servicios
         List<Sale> sales = saleService.obtenerPedidos();
         List<RutaPorPedido> rutasPorPedido = rutaPorPedidoService.obtenerRutasPorPedidos();
         List<Route> routes = routeService.obtenerRutas();
 
-        String sql = "CALL LeerEnviosPorFecha(?)";
-        Timestamp startTimestamp = startDate != null ? Timestamp.valueOf(startDate) : null;
+        String sql = "CALL LeerEnvio()";
 
 
-        return jdbcTemplate.query(sql, new Object[]{startTimestamp}, (rs, rowNum) -> {
+        return jdbcTemplate.query(sql, (rs, rowNum) -> {
+
             // Asignar datos básicos del envio
             Envio envio = new Envio();
             envio.setId(rs.getInt("id"));

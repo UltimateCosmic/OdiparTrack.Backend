@@ -49,10 +49,28 @@ public class SimulatedAnnealingController {
         List<Velocidad> velocidades = velocidadService.obtenerVelocidades();
         List<Route> routes = routeService.obtenerRutas();
         List<Block> bloqueos = bloqueoService.obtenerBloqueos();
-        List<Sale> sales = saleService.obtenerPedidos();
+        List<Sale> sales = saleService.obtenerPedidosPorFecha(startDatetime);
         List<Camion> camiones = camionService.obtenerCamiones();
-        List<Envio> envios = envioService.obtenerEnviosPorFecha(startDatetime);
+        List<Envio> envios = envioService.obtenerEnvios();
 
-        return simulatedAnnealingService.getBestSolution(sales, routes, offices, velocidades, bloqueos, camiones, envios);
+        /*
+         * -- *** ANTES DE EMPEZAR EJECUCIÓN
+         * -- Asignar Distancia
+         * -- Asignar Velocidad
+         */
+
+        // Planificación de envios (front)
+        List<Envio> enviosPlanificacion = simulatedAnnealingService.getBestSolution(sales, routes, offices, velocidades,
+                bloqueos, camiones, envios);
+
+        /*
+         * -- *** DESPUÉS DE C/PLANIFICACIÓN
+         * -- Actualizar (CAMION): Tiempo_nuevo_envio
+         * -- Insertar (ENVIO)
+         * -- Actualizar (PEDIDOS): Envio + Camion
+         * -- Actualizar (RUTAXSPEDIDOS): Pedido + Ruta
+         */
+
+        return enviosPlanificacion;
     }
 }

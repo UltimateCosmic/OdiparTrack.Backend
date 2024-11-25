@@ -1,13 +1,7 @@
 package com.odipartrack.controller;
 
 import com.odipartrack.model.Camion;
-import com.odipartrack.model.Sale;
-import com.odipartrack.model.Route;
-import com.odipartrack.model.RutaPorPedido;
 import com.odipartrack.service.CamionService;
-import com.odipartrack.service.RouteService;
-import com.odipartrack.service.RutaPorPedidoService;
-import com.odipartrack.service.SaleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
