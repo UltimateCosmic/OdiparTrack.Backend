@@ -11,6 +11,9 @@ public class Office {
     private String department;
     private String province;  
     
+    public Office() {
+    }
+
     public Office(int id, String ubigeo, String department, String province, double latitude, double longitude, String region, int capacity) {
         this.id = id;
         this.ubigeo = ubigeo;
