@@ -2,8 +2,13 @@
 package com.odipartrack.algorithm;
 
 import com.odipartrack.model.*;
+import com.odipartrack.service.EnvioService;
+
 import java.util.*;
 import java.util.stream.Collectors;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
@@ -26,10 +31,13 @@ public class SimulatedAnnealing {
     private List<Envio> proxEnvios; // Lista de proxEnvíos
     private List<Camion> camiones; // Lista de camiones
 
+    @Autowired
+    private EnvioService envioService;
+
     // Constructor
     public SimulatedAnnealing(List<Sale> sales, List<Route> routes, double temperature, double coolingRate,
             int maxIterations, List<Office> offices, List<Velocidad> velocidades, List<Block> bloqueos,
-            List<Camion> camiones, List<Envio> proxEnvios) {
+            List<Camion> camiones, List<Envio> proxEnvios, EnvioService envioService) {
         this.sales = sales;
         this.routes = routes;
         this.offices = offices;
@@ -43,6 +51,7 @@ public class SimulatedAnnealing {
         this.bloqueos = bloqueos;
         this.camiones = camiones;
         this.proxEnvios = proxEnvios;
+        this.envioService = envioService;
     }
 
     private Map<Office, List<Route>> buildGraph(List<Route> routes) {
@@ -63,13 +72,14 @@ public class SimulatedAnnealing {
     }
 
     public List<Envio> run() {
-        double i = 0;
+
+        double i = 0;                
         loadCamiones();
         List<Envio> currentSolution = inicializarSolucion(camiones);
         double currentFitness = calculateFitness(currentSolution);
         double bestFitness = currentFitness;
         List<Envio> bestSolution = new ArrayList<>(currentSolution);
-
+        
         System.out.println("Solución Inicial:");
         printSolution(currentSolution);
         System.out.println("Fitness de la Solución Inicial: " + currentFitness);
@@ -100,6 +110,10 @@ public class SimulatedAnnealing {
             System.out.println("Mejor Fitness hasta Ahora: " + bestFitness);
             System.out.println("===============================================\n");
             i++;
+
+            if (i >= maxIterations) {
+                break;
+            }
         }
 
         System.out.println("Mejor Solución Encontrada:");
@@ -109,6 +123,7 @@ public class SimulatedAnnealing {
 
         // Insertar en la BD los envios (bestSolution)
         System.out.println("Fitness de la Mejor Solución: " + bestFitness);
+        envioService.procesarEnvios(bestSolution);
 
         // Retornar la mejor solución encontrada
         return bestSolution;

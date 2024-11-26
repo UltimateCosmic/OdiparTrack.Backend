@@ -1,6 +1,7 @@
 package com.odipartrack.service;
 
 import com.odipartrack.model.Camion;
+import com.odipartrack.model.Envio;
 import com.odipartrack.model.Office;
 import com.odipartrack.model.Route;
 import com.odipartrack.model.RutaPorPedido;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,7 +24,8 @@ public class CamionService {
     private final RutaPorPedidoService rutaPorPedidoService;
     private final RouteService routeService;
 
-    public CamionService(SaleService saleService, RutaPorPedidoService rutaPorPedidoService, RouteService routeService) {
+    public CamionService(SaleService saleService, RutaPorPedidoService rutaPorPedidoService,
+            RouteService routeService) {
         this.saleService = saleService;
         this.rutaPorPedidoService = rutaPorPedidoService;
         this.routeService = routeService;
@@ -88,5 +91,28 @@ public class CamionService {
 
             return camion;
         });
+    }
+
+    /**
+     * Actualiza la salida mínima de los camiones en la base de datos.
+     *
+     * @param envios Listado de envíos en formato JSON.
+     */
+    public void actualizarSalidaCamiones(List<Envio> envios) {
+        String sql = "CALL ActualizarSalidaCamion(?, ?)";
+
+        for (Envio envio : envios) {
+            try {
+                String codigoCamion = envio.getCamion().getCodigo();
+                Timestamp salidaMinima = Timestamp.valueOf(envio.getCamion().getSalida_minima());
+
+                jdbcTemplate.update(sql, codigoCamion, salidaMinima);
+                System.out
+                        .println("Actualizado Camión con código: " + codigoCamion + ", Salida mínima: " + salidaMinima);
+            } catch (Exception e) {
+                System.err.println("Error al actualizar el camión: " + envio.getCamion().getCodigo());
+                e.printStackTrace();
+            }
+        }
     }
 }
