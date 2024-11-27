@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,6 +49,7 @@ public class SimulatedAnnealingController {
         List<Office> offices = officeService.obtenerOficinas();
         List<Velocidad> velocidades = velocidadService.obtenerVelocidades();
         List<Route> routes = routeService.obtenerRutas();
+        leerDistanciasRutas(routes);
         List<Block> bloqueos = bloqueoService.obtenerBloqueos();
         List<Sale> sales = saleService.obtenerPedidosPorFecha(startDatetime);
         bloqueos = filtrarBloqueos(bloqueos, sales);
@@ -95,5 +95,27 @@ public class SimulatedAnnealingController {
             }            
         }
         return bloqueosFiltrados;
+    }
+
+    private void leerDistanciasRutas(List<Route> rutas) {
+        for (Route route : rutas) {
+            Office start = route.getOrigin();
+            Office end = route.getDestination();
+            double distance = calculateDistance(start.getLatitude(), start.getLongitude(),
+                        end.getLatitude(), end.getLongitude());
+            route.setDistance(distance);
+        }
+    }
+
+    // Método para calcular la distancia entre dos puntos geográficos usando la fórmula de Haversine
+    private static double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+        final int R = 6371; // Radio de la Tierra en kilómetros
+        double latDistance = Math.toRadians(lat2 - lat1);
+        double lonDistance = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c; // Distancia en kilómetros
     }
 }

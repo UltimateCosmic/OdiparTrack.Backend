@@ -70,7 +70,6 @@ public class SaleService {
             camion.setId(rs.getInt("idCamion"));
             camion.setCodigo(rs.getString("CamionCodigo"));
             camion.setCapacidad(rs.getInt("CamionCapacidad"));
-            camion.setTiempoNuevoEnvio(getLocalDateTime(rs, "TiempoNuevoEnvio"));
             camion.setIdInicio(rs.getString("OficinaCamionUBIGEO"));
 
             // Asignar datos de la oficina de origen del camión

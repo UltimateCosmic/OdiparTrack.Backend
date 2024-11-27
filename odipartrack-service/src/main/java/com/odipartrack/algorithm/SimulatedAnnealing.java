@@ -1,17 +1,10 @@
 package com.odipartrack.algorithm;
-
-import com.odipartrack.model.Camion;
-import com.odipartrack.model.Envio;
-import com.odipartrack.model.Office;
-import com.odipartrack.model.Route;
-import com.odipartrack.model.Velocidad;
-import com.odipartrack.model.Block;
-import com.odipartrack.model.Sale;
+import com.odipartrack.model.*;
+import com.odipartrack.service.CamionService;
 
 import java.util.*;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-
 // Clase que representa el algoritmo de Dijkstra y su uso en la búsqueda de rutas
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -40,10 +33,10 @@ public class SimulatedAnnealing {
     private double bestFitness_;
     private double promedioFitness;
     private double cantEnvios;
+    private List<Camion> camiones_;
    
-
     // Constructor
-    public SimulatedAnnealing(List<Sale> sales, List<Route> routes, double temperature, double coolingRate, int maxIterations, List<Office> offices, List<Velocidad> velocidades, List<Block> bloqueos) {
+    public SimulatedAnnealing(List<Sale> sales, List<Route> routes, double temperature, double coolingRate, int maxIterations, List<Office> offices, List<Velocidad> velocidades, List<Block> bloqueos, List<Camion> camiones) {
         this.sales = sales;
         this.routes = routes;
         this.temperature = temperature;
@@ -55,6 +48,7 @@ public class SimulatedAnnealing {
         this.velocidades = velocidades;
         this.envios = new ArrayList<>();
         this.bloqueos = bloqueos;
+        this.camiones_ = camiones;
     }
 
     // Método para construir el grafo a partir de la lista de rutas
@@ -69,7 +63,7 @@ public class SimulatedAnnealing {
 
     public List<Envio> run() {
          double i = 0;
-        List<Camion> camiones = loadCamiones();
+        List<Camion> camiones = camiones_;
         List<Envio> currentSolution = inicializarSolucion(camiones);
         double currentFitness = calculateFitness(currentSolution);
         double bestFitness = currentFitness;
@@ -109,106 +103,10 @@ public class SimulatedAnnealing {
         
         System.out.println("Mejor Solución Encontrada:");
         printSolution(bestSolution);
-        
-        rellenarTiempoSalida(bestSolution, "proxenvios.txt");
-        
-        escribirProximosEnvios(bestSolution);
+                
         System.out.println("Fitness de la Mejor Solución: " + bestFitness);
         
         return bestSolution;
-    }
-    public void rellenarTiempoSalida(List<Envio> bestSolution, String filePath) {
-        File file = new File(filePath);
-        if (file.exists()) {
-            Map<String, LocalDateTime> fechasSalida = leerFechasSalida(file);
-
-            for (Envio envio : bestSolution) {
-                if (envio.getCamion().getSalida_minima()== null) {
-                    LocalDateTime fechaSalida = fechasSalida.get(envio.getCamion().getCodigo());
-                    if (fechaSalida != null) {
-                        envio.setTiempoSalida(fechaSalida);
-                    }
-                }
-            }
-        }
-    }
-    private List<Camion> loadCamiones() {
-        List<Camion> camiones = new ArrayList<>();
-
-        // Encontrar las oficinas por código
-        Office lima = findOfficeByCode(offices, "150101");
-        Office trujillo = findOfficeByCode(offices, "130101");
-        Office arequipa = findOfficeByCode(offices, "040101");
-
-        // Crear camiones para Lima
-        for (int i = 1; i <= 4; i++) {
-            camiones.add(new Camion(90, "A" + String.format("%03d", i), lima, new ArrayList<>(), new ArrayList<>()));
-        }
-        for (int i = 1; i <= 7; i++) {
-            camiones.add(new Camion(45, "B" + String.format("%03d", i), lima, new ArrayList<>(), new ArrayList<>()));
-        }
-        for (int i = 1; i <= 10; i++) {
-            camiones.add(new Camion(30, "C" + String.format("%03d", i), lima, new ArrayList<>(), new ArrayList<>()));
-        }
-
-        // Crear camiones para Trujillo
-        camiones.add(new Camion(90, "A005", trujillo, new ArrayList<>(), new ArrayList<>()));
-        for (int i = 8; i <= 10; i++) {
-            camiones.add(new Camion(45, "B" + String.format("%03d", i), trujillo, new ArrayList<>(), new ArrayList<>()));
-        }
-        for (int i = 11; i <= 16; i++) {
-            camiones.add(new Camion(30, "C" + String.format("%03d", i), trujillo, new ArrayList<>(), new ArrayList<>()));
-        }
-
-        // Crear camiones para Arequipa
-        camiones.add(new Camion(90, "A006", arequipa, new ArrayList<>(), new ArrayList<>()));
-        for (int i = 11; i <= 15; i++) {
-            camiones.add(new Camion(45, "B" + String.format("%03d", i), arequipa, new ArrayList<>(), new ArrayList<>()));
-        }
-        for (int i = 17; i <= 24; i++) {
-            camiones.add(new Camion(30, "C" + String.format("%03d", i), arequipa, new ArrayList<>(), new ArrayList<>()));
-        }
-
-        // Leer el archivo proxenvios.txt si existe
-        File file = new File("proxenvios.txt");
-        if (file.exists()) {
-            Map<String, LocalDateTime> fechasSalida = leerFechasSalida(file);
-            actualizarFechasSalida(camiones, fechasSalida);
-        }
-
-        return camiones;
-    }
-    private Map<String, LocalDateTime> leerFechasSalida(File file) {
-        Map<String, LocalDateTime> fechasSalida = new HashMap<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] parts = line.split(", Fecha de próxima salida: ");
-                if (parts.length == 2) {
-                    String codigoCamion = parts[0].replace("Código del camión: ", "").trim();
-                    String fechaStr = parts[1].trim();
-                    if (!fechaStr.equals("null")) {
-                        LocalDateTime fechaSalida = LocalDateTime.parse(fechaStr, formatter);
-                        fechasSalida.put(codigoCamion, fechaSalida);
-                    }
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        return fechasSalida;
-    }
-
-    private void actualizarFechasSalida(List<Camion> camiones, Map<String, LocalDateTime> fechasSalida) {
-        for (Camion camion : camiones) {
-            LocalDateTime fechaSalida = fechasSalida.get(camion.getCodigo());
-            if (fechaSalida != null) {
-                camion.setFechaSalida(fechaSalida);
-            }
-        }
     }
 
     private Office findOfficeByCode(List<Office> offices, String ubigeo) {

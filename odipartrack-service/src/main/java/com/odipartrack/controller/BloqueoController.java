@@ -27,7 +27,7 @@ public class BloqueoController {
     @GetMapping("/leerPorFecha")
     public ResponseEntity<List<Block>> obtenerBloqueosPorFecha(@RequestParam("fechaHoraInicio") String fechaHoraInicio) {
         LocalDateTime fechaInicio = LocalDateTime.parse(fechaHoraInicio);
-        List<Block> bloqueos = bloqueoService.obtenerBloqueosPorFecha(fechaHoraInicio);
+        List<Block> bloqueos = bloqueoService.obtenerBloqueosPorFecha(fechaInicio);
         return ResponseEntity.ok(bloqueos);
     }
     

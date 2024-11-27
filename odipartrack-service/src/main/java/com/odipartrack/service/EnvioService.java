@@ -65,7 +65,6 @@ public class EnvioService {
             camion.setCodigo(rs.getString("CamionCodigo"));
             camion.setIdInicio(rs.getString("OficinaUBIGEO"));
             camion.setCapacidad(rs.getInt("CamionCapacidad"));
-            camion.setTiempoNuevoEnvio(rs.getTimestamp("TiempoNuevoEnvio").toLocalDateTime());
             if (rs.getTimestamp("SalidaMinima") != null) {
                 camion.setSalida_minima(rs.getTimestamp("SalidaMinima").toLocalDateTime());
             }
