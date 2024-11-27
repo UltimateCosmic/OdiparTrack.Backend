@@ -1,16 +1,28 @@
-
 package com.odipartrack.algorithm;
 
-import com.odipartrack.model.*;
-import com.odipartrack.service.EnvioService;
+import com.odipartrack.model.Camion;
+import com.odipartrack.model.Envio;
+import com.odipartrack.model.Office;
+import com.odipartrack.model.Route;
+import com.odipartrack.model.Velocidad;
+import com.odipartrack.model.Block;
+import com.odipartrack.model.Sale;
 
 import java.util.*;
-import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Autowired;
-
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+
+// Clase que representa el algoritmo de Dijkstra y su uso en la búsqueda de rutas
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.List;
+import java.io.File;
+import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.time.format.DateTimeFormatter;
+import java.io.BufferedReader;
 
 public class SimulatedAnnealing {
 
@@ -28,43 +40,27 @@ public class SimulatedAnnealing {
     private double bestFitness_;
     private double promedioFitness;
     private double cantEnvios;
-    private List<Envio> proxEnvios; // Lista de proxEnvíos
-    private List<Camion> camiones; // Lista de camiones
-
-    @Autowired
-    private EnvioService envioService;
+   
 
     // Constructor
-    public SimulatedAnnealing(List<Sale> sales, List<Route> routes, double temperature, double coolingRate,
-            int maxIterations, List<Office> offices, List<Velocidad> velocidades, List<Block> bloqueos,
-            List<Camion> camiones, List<Envio> proxEnvios, EnvioService envioService) {
+    public SimulatedAnnealing(List<Sale> sales, List<Route> routes, double temperature, double coolingRate, int maxIterations, List<Office> offices, List<Velocidad> velocidades, List<Block> bloqueos) {
         this.sales = sales;
         this.routes = routes;
-        this.offices = offices;
         this.temperature = temperature;
         this.coolingRate = coolingRate;
         this.maxIterations = maxIterations;
         this.random = new Random();
         this.graph = buildGraph(routes); // Construir el grafo desde las rutas
+        this.offices = offices;
         this.velocidades = velocidades;
-        this.envios = envios;
+        this.envios = new ArrayList<>();
         this.bloqueos = bloqueos;
-        this.camiones = camiones;
-        this.proxEnvios = proxEnvios;
-        this.envioService = envioService;
     }
 
+    // Método para construir el grafo a partir de la lista de rutas
     private Map<Office, List<Route>> buildGraph(List<Route> routes) {
         Map<Office, List<Route>> graph = new HashMap<>();
         for (Route route : routes) {
-            if (route.getOrigin() == null || route.getDestination() == null) {
-                System.out.println("Ruta inválida: Origen o destino son null");
-                continue;
-            }
-            if (!offices.contains(route.getOrigin()) || !offices.contains(route.getDestination())) {
-                System.out.println("Oficina no encontrada en el grafo: Origen=" + route.getOrigin().getUbigeo() +
-                        ", Destino=" + route.getDestination().getUbigeo());
-            }
             graph.putIfAbsent(route.getOrigin(), new ArrayList<>());
             graph.get(route.getOrigin()).add(route);
         }
@@ -72,21 +68,20 @@ public class SimulatedAnnealing {
     }
 
     public List<Envio> run() {
-
-        double i = 0;                
-        loadCamiones();
+         double i = 0;
+        List<Camion> camiones = loadCamiones();
         List<Envio> currentSolution = inicializarSolucion(camiones);
         double currentFitness = calculateFitness(currentSolution);
         double bestFitness = currentFitness;
         List<Envio> bestSolution = new ArrayList<>(currentSolution);
-        
+
         System.out.println("Solución Inicial:");
         printSolution(currentSolution);
         System.out.println("Fitness de la Solución Inicial: " + currentFitness);
 
         while (temperature > 1) {
 
-            List<Envio> neighborSolution = generateNeighbor(currentSolution, camiones);
+            List<Envio> neighborSolution = generateNeighbor(currentSolution,camiones);
             double neighborFitness = calculateFitness(neighborSolution);
 
             if (shouldAcceptSolution(currentFitness, neighborFitness)) {
@@ -110,74 +105,108 @@ public class SimulatedAnnealing {
             System.out.println("Mejor Fitness hasta Ahora: " + bestFitness);
             System.out.println("===============================================\n");
             i++;
-
-            if (i >= maxIterations) {
-                break;
-            }
         }
-
+        
         System.out.println("Mejor Solución Encontrada:");
         printSolution(bestSolution);
-
-        rellenarTiempoSalida(bestSolution, proxEnvios);
-
-        // Insertar en la BD los envios (bestSolution)
+        
+        rellenarTiempoSalida(bestSolution, "proxenvios.txt");
+        
+        escribirProximosEnvios(bestSolution);
         System.out.println("Fitness de la Mejor Solución: " + bestFitness);
-        envioService.procesarEnvios(bestSolution);
-
-        // Retornar la mejor solución encontrada
+        
         return bestSolution;
     }
+    public void rellenarTiempoSalida(List<Envio> bestSolution, String filePath) {
+        File file = new File(filePath);
+        if (file.exists()) {
+            Map<String, LocalDateTime> fechasSalida = leerFechasSalida(file);
 
-    public void rellenarTiempoSalida(List<Envio> bestSolution, List<Envio> proxEnvios) {
-        // Crear un mapa con los códigos de camión y sus fechas de próxima salida
-        Map<String, LocalDateTime> fechasSalida = new HashMap<>();
-        for (Envio envio : proxEnvios) {
-            if (envio.getCamion() != null && envio.getCamion().getCodigo() != null && envio.getTiempoSalida() != null) {
-                fechasSalida.put(envio.getCamion().getCodigo(), envio.getTiempoSalida());
-            }
-        }
-
-        // Asignar tiempos de salida a la lista de soluciones
-        for (Envio envio : bestSolution) {
-            if (envio.getCamion() != null && envio.getCamion().getSalida_minima() == null) {
-                String codigoCamion = envio.getCamion().getCodigo();
-                LocalDateTime fechaSalida = fechasSalida.get(codigoCamion);
-                if (fechaSalida != null) {
-                    envio.setTiempoSalida(fechaSalida);
+            for (Envio envio : bestSolution) {
+                if (envio.getCamion().getSalida_minima()== null) {
+                    LocalDateTime fechaSalida = fechasSalida.get(envio.getCamion().getCodigo());
+                    if (fechaSalida != null) {
+                        envio.setTiempoSalida(fechaSalida);
+                    }
                 }
             }
         }
     }
+    private List<Camion> loadCamiones() {
+        List<Camion> camiones = new ArrayList<>();
 
-    private void loadCamiones() {
-        if (proxEnvios == null || camiones == null) {
-            return;
+        // Encontrar las oficinas por código
+        Office lima = findOfficeByCode(offices, "150101");
+        Office trujillo = findOfficeByCode(offices, "130101");
+        Office arequipa = findOfficeByCode(offices, "040101");
+
+        // Crear camiones para Lima
+        for (int i = 1; i <= 4; i++) {
+            camiones.add(new Camion(90, "A" + String.format("%03d", i), lima, new ArrayList<>(), new ArrayList<>()));
+        }
+        for (int i = 1; i <= 7; i++) {
+            camiones.add(new Camion(45, "B" + String.format("%03d", i), lima, new ArrayList<>(), new ArrayList<>()));
+        }
+        for (int i = 1; i <= 10; i++) {
+            camiones.add(new Camion(30, "C" + String.format("%03d", i), lima, new ArrayList<>(), new ArrayList<>()));
         }
 
-        // Crear un mapa de fechas de salida basado en proxEnvios
-        Map<String, LocalDateTime> fechasSalida = generarMapaFechasSalida(proxEnvios);
+        // Crear camiones para Trujillo
+        camiones.add(new Camion(90, "A005", trujillo, new ArrayList<>(), new ArrayList<>()));
+        for (int i = 8; i <= 10; i++) {
+            camiones.add(new Camion(45, "B" + String.format("%03d", i), trujillo, new ArrayList<>(), new ArrayList<>()));
+        }
+        for (int i = 11; i <= 16; i++) {
+            camiones.add(new Camion(30, "C" + String.format("%03d", i), trujillo, new ArrayList<>(), new ArrayList<>()));
+        }
 
-        // Actualizar las fechas de salida de los camiones usando el mapa generado
-        actualizarFechasSalida(camiones, fechasSalida);
+        // Crear camiones para Arequipa
+        camiones.add(new Camion(90, "A006", arequipa, new ArrayList<>(), new ArrayList<>()));
+        for (int i = 11; i <= 15; i++) {
+            camiones.add(new Camion(45, "B" + String.format("%03d", i), arequipa, new ArrayList<>(), new ArrayList<>()));
+        }
+        for (int i = 17; i <= 24; i++) {
+            camiones.add(new Camion(30, "C" + String.format("%03d", i), arequipa, new ArrayList<>(), new ArrayList<>()));
+        }
+
+        // Leer el archivo proxenvios.txt si existe
+        File file = new File("proxenvios.txt");
+        if (file.exists()) {
+            Map<String, LocalDateTime> fechasSalida = leerFechasSalida(file);
+            actualizarFechasSalida(camiones, fechasSalida);
+        }
+
+        return camiones;
     }
+    private Map<String, LocalDateTime> leerFechasSalida(File file) {
+        Map<String, LocalDateTime> fechasSalida = new HashMap<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
-    private Map<String, LocalDateTime> generarMapaFechasSalida(List<Envio> proxEnvios) {
-        // Generar un mapa donde la clave es el código del camión y el valor es la fecha
-        // de próxima salida
-        return proxEnvios.stream()
-                .filter(envio -> envio.getCamion() != null && envio.getCamion().getCodigo() != null)
-                .collect(Collectors.toMap(
-                        envio -> envio.getCamion().getCodigo(),
-                        Envio::getTiempoSalida));
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(", Fecha de próxima salida: ");
+                if (parts.length == 2) {
+                    String codigoCamion = parts[0].replace("Código del camión: ", "").trim();
+                    String fechaStr = parts[1].trim();
+                    if (!fechaStr.equals("null")) {
+                        LocalDateTime fechaSalida = LocalDateTime.parse(fechaStr, formatter);
+                        fechasSalida.put(codigoCamion, fechaSalida);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return fechasSalida;
     }
 
     private void actualizarFechasSalida(List<Camion> camiones, Map<String, LocalDateTime> fechasSalida) {
-        // Actualizar la fecha de salida de cada camión en base al mapa de fechas
         for (Camion camion : camiones) {
             LocalDateTime fechaSalida = fechasSalida.get(camion.getCodigo());
             if (fechaSalida != null) {
-                camion.setTiempo_nuevo_envio(fechaSalida);
+                camion.setFechaSalida(fechaSalida);
             }
         }
     }
@@ -223,105 +252,96 @@ public class SimulatedAnnealing {
         return envios;
     }
 
+
     // Función para encontrar o crear envíos
     private Envio findOrCreateEnvio(List<Envio> envios, Sale sale, List<Camion> camiones, int pedidonum) {
         // Calcular el tiempo límite del pedido
         LocalDateTime tiempoLimite = calcularTiempoLimite(sale.getDateTime(), sale.getDestination().getRegion());
-
-        // Buscar el primer envío con tiempo de llegada menor al tiempo límite y con
-        // capacidad suficiente
+        double a = 0;
+        
+        // Buscar el primer envío con tiempo de llegada menor al tiempo límite y con capacidad suficiente
         for (Envio envio : envios) {
             if (envio.getTiempoLlegada() == null || envio.getTiempoLlegada().isBefore(tiempoLimite)) {
                 // Calcular el tiempo de llegada estimado
                 List<Sale> pedidos = envio.getCamion().getPedidos();
-                Office origen = pedidos.isEmpty() ? envio.getCamion().getInicio()
-                        : pedidos.get(pedidos.size() - 1).getDestination();
+                Office origen = pedidos.isEmpty() ? envio.getCamion().getInicio() : pedidos.get(pedidos.size() - 1).getDestination();
                 LocalDateTime ultimoTiempo = sale.getDateTime();
 
-                // Calcular el tiempo entre el destino del último pedido y el destino del nuevo
-                // pedido
-                Map.Entry<Double, List<Route>> result = calculateRouteDistance(origen, sale.getDestination(),
-                        sale.getDateTime());
+                // Calcular el tiempo entre el destino del último pedido y el destino del nuevo pedido
+                Map.Entry<Double, List<Route>> result = calculateRouteDistance(origen, sale.getDestination(),sale.getDateTime());
                 double distancia = result.getKey();
                 double velocidad = obtenerVelocidad(origen.getRegion(), sale.getDestination().getRegion());
                 double tiempoLlegada = distancia / velocidad;
 
                 // Verificar si el tramo ya está en la lista de rutas del camión
                 boolean tramoExistente = envio.getCamion().getRutas().stream()
-                        .anyMatch(ruta -> ruta.getOrigin().equals(origen)
-                                && ruta.getDestination().equals(sale.getDestination()));
+                        .anyMatch(ruta -> ruta.getOrigin().equals(origen) && ruta.getDestination().equals(sale.getDestination()));
 
-                // Acumular el tiempo de llegada en la demora del envío solo si el tramo no
-                // existe
+                // Acumular el tiempo de llegada en la demora del envío solo si el tramo no existe
                 double nuevaDemora = envio.getDemora();
                 if (!tramoExistente) {
                     nuevaDemora += tiempoLlegada;
                 }
-
+                
                 // Estimar la hora de llegada
-                LocalDateTime tiempoLlegadaEstimado = safePlusHours(ultimoTiempo, (long) nuevaDemora);
+                LocalDateTime tiempoLlegadaEstimado = ultimoTiempo.plusHours((long) nuevaDemora);
 
                 // Calcular el menor tiempo límite del primer pedido
                 LocalDateTime menorTiempoLimite = tiempoLimite;
                 if (!pedidos.isEmpty()) {
                     Sale primerPedido = pedidos.get(0);
-                    LocalDateTime tiempoLimitePrimerPedido = safePlusHours(primerPedido.getDateTime(), (long) 24);
+                    LocalDateTime tiempoLimitePrimerPedido = primerPedido.getDateTime().plusHours(24);
                     if (tiempoLimitePrimerPedido.isBefore(menorTiempoLimite)) {
                         menorTiempoLimite = tiempoLimitePrimerPedido;
                     }
                 }
 
                 // Verificar si llega antes del tiempo límite y tiene capacidad suficiente
-                if (tiempoLlegadaEstimado.isBefore(menorTiempoLimite)
-                        && envio.getCapacidadRestante() >= sale.getQuantity()) {
+                if (tiempoLlegadaEstimado.isBefore(menorTiempoLimite) && envio.getCapacidadRestante() >= sale.getQuantity()) {
                     envio.setTiempoLlegada(tiempoLlegadaEstimado);
                     envio.setDemora(nuevaDemora); // Actualizar la demora
-                    envio.getCamion().setFechaSalida(safePlusHours(tiempoLlegadaEstimado, (long) 2));
+                    envio.getCamion().setFechaSalida(tiempoLlegadaEstimado.plusHours(2));
                     // Actualizar salida_minima
                     if (!tramoExistente) {
                         envio.getCamion().getDem_Pedidos().add(nuevaDemora);
-                        envio.getCamion().getDist_Pedidos().add(distancia); // Agregar la nueva demora a la lista de
-                                                                            // demoras por pedidos
+                        envio.getCamion().getDist_Pedidos().add(distancia);    // Agregar la nueva demora a la lista de demoras por pedidos
                         envio.getCamion().getRutas().addAll(result.getValue()); // Agregar las rutas al camión
                     } else {
                         envio.getCamion().getDist_Pedidos().add(0.0);
                     }
-                    Office lima = findOfficeByCode(offices, "040201");
-                    Office trujillo = findOfficeByCode(offices, "130101");
-                    Office arequipa = findOfficeByCode(offices, "040101");
+                    Office lima = findOfficeByCode(offices, "150101");
+            Office trujillo = findOfficeByCode(offices, "130101");
+            Office arequipa = findOfficeByCode(offices, "040101");
 
-                    Office destinoFinal = sale.getDestination();
-                    Office mejorOficina = null;
-                    double menorDistancia = Double.MAX_VALUE;
+            Office destinoFinal = sale.getDestination();
+            Office mejorOficina = null;
+            double menorDistancia = Double.MAX_VALUE;
 
-                    // Calcular la distancia a Lima
-                    Map.Entry<Double, List<Route>> distanciaLima = calculateRouteDistance(destinoFinal, lima,
-                            tiempoLlegadaEstimado);
-                    if (distanciaLima.getKey() < menorDistancia) {
-                        menorDistancia = distanciaLima.getKey();
-                        mejorOficina = lima;
-                    }
+            // Calcular la distancia a Lima
+            Map.Entry<Double, List<Route>> distanciaLima = calculateRouteDistance(destinoFinal, lima, tiempoLlegadaEstimado);
+            if (distanciaLima.getKey() < menorDistancia) {
+                menorDistancia = distanciaLima.getKey();
+                mejorOficina = lima;
+            }
 
-                    // Calcular la distancia a Trujillo
-                    Map.Entry<Double, List<Route>> distanciaTrujillo = calculateRouteDistance(destinoFinal, trujillo,
-                            tiempoLlegadaEstimado);
-                    if (distanciaTrujillo.getKey() < menorDistancia) {
-                        menorDistancia = distanciaTrujillo.getKey();
-                        mejorOficina = trujillo;
-                    }
+            // Calcular la distancia a Trujillo
+            Map.Entry<Double, List<Route>> distanciaTrujillo = calculateRouteDistance(destinoFinal, trujillo, tiempoLlegadaEstimado);
+            if (distanciaTrujillo.getKey() < menorDistancia) {
+                menorDistancia = distanciaTrujillo.getKey();
+                mejorOficina = trujillo;
+            }
 
-                    // Calcular la distancia a Arequipa
-                    Map.Entry<Double, List<Route>> distanciaArequipa = calculateRouteDistance(destinoFinal, arequipa,
-                            tiempoLlegadaEstimado);
-                    if (distanciaArequipa.getKey() < menorDistancia) {
-                        menorDistancia = distanciaArequipa.getKey();
-                        mejorOficina = arequipa;
-                    }
+            // Calcular la distancia a Arequipa
+            Map.Entry<Double, List<Route>> distanciaArequipa = calculateRouteDistance(destinoFinal, arequipa, tiempoLlegadaEstimado);
+            if (distanciaArequipa.getKey() < menorDistancia) {
+                menorDistancia = distanciaArequipa.getKey();
+                mejorOficina = arequipa;
+            }
 
-                    // Actualizar el origen del camión con la mejor oficina encontrada
-                    if (mejorOficina != null) {
-                        envio.getCamion().setInicio(mejorOficina);
-                    }
+            // Actualizar el origen del camión con la mejor oficina encontrada
+            if (mejorOficina != null) {
+                envio.getCamion().setInicio(mejorOficina);
+            }
                     return envio;
                 }
             }
@@ -330,35 +350,32 @@ public class SimulatedAnnealing {
         // Si no se encuentra un envío adecuado, crear un nuevo envío
         for (Camion camion : camiones) {
             if (camion.getFechaSalida() == null || camion.getFechaSalida().isBefore(sale.getDateTime())) {
-                Camion nuevoCamion = new Camion(camion.getCapacidad(), camion.getCodigo(), camion.getInicio(),
-                        new ArrayList<>(), new ArrayList<>());
+                if (camion.getCodigo().equals("A001")) {
+                    pedidonum = 33;
+                }
+                Camion nuevoCamion = new Camion(camion.getCapacidad(), camion.getCodigo(), camion.getInicio(), new ArrayList<>(), new ArrayList<>());
                 Envio nuevoEnvio = new Envio(nuevoCamion, null);
                 nuevoEnvio.setCapacidadRestante(nuevoCamion.getCapacidad());
                 nuevoEnvio.setTiempoSalida(sale.getDateTime());
 
                 // Calcular el tiempo de llegada estimado para el nuevo envío
-                Map.Entry<Double, List<Route>> result = calculateRouteDistance(nuevoCamion.getInicio(),
-                        sale.getDestination(), nuevoEnvio.getTiempoSalida());
+                Map.Entry<Double, List<Route>> result = calculateRouteDistance(nuevoCamion.getInicio(), sale.getDestination(),nuevoEnvio.getTiempoSalida());
                 double distancia = result.getKey();
-                double velocidad = obtenerVelocidad(nuevoCamion.getInicio().getRegion(),
-                        sale.getDestination().getRegion());
+                double velocidad = obtenerVelocidad(nuevoCamion.getInicio().getRegion(), sale.getDestination().getRegion());
                 double tiempoLlegada = distancia / velocidad;
                 double nuevaDemora = tiempoLlegada;
-                LocalDateTime tiempoLlegadaEstimado = safePlusHours(sale.getDateTime(), (long) nuevaDemora);
+                LocalDateTime tiempoLlegadaEstimado = sale.getDateTime().plusHours((long) nuevaDemora);
 
-                LocalDateTime tiempoLimitePrimerPedido = safePlusHours(sale.getDateTime(), (long) 24);
+                LocalDateTime tiempoLimitePrimerPedido = sale.getDateTime().plusHours(24);
 
                 // Verificar si llega antes del tiempo límite y tiene capacidad suficiente
-                if (tiempoLlegadaEstimado.isBefore(tiempoLimitePrimerPedido)
-                        && nuevoEnvio.getCapacidadRestante() >= sale.getQuantity()) {
+                if (tiempoLlegadaEstimado.isBefore(tiempoLimitePrimerPedido) && nuevoEnvio.getCapacidadRestante() >= sale.getQuantity()) {
                     // Asignar tiempos y demora al nuevo envío
                     nuevoEnvio.setTiempoLlegada(tiempoLlegadaEstimado);
                     nuevoEnvio.setDemora(nuevaDemora);
-                    nuevoEnvio.getCamion().setFechaSalida(safePlusHours(tiempoLlegadaEstimado, (long) 2));
-                    nuevoCamion.getDem_Pedidos().add(nuevaDemora); // Inicializar la lista de demoras con la nueva
-                                                                   // demora
-                    nuevoCamion.getDist_Pedidos().add(distancia); // Inicializar la lista de distancias con la nueva
-                                                                  // demora
+                    nuevoEnvio.getCamion().setFechaSalida(tiempoLlegadaEstimado.plusHours(2));
+                    nuevoCamion.getDem_Pedidos().add(nuevaDemora); // Inicializar la lista de demoras con la nueva demora
+                    nuevoCamion.getDist_Pedidos().add(distancia); // Inicializar la lista de distancias con la nueva demora
                     nuevoCamion.getRutas().addAll(result.getValue()); // Agregar las rutas al camión
 
                     envios.add(nuevoEnvio);
@@ -370,25 +387,22 @@ public class SimulatedAnnealing {
         // Si no se encuentra un camión adecuado, devolver null
         return null;
     }
-
-    // Calcular el fitness de una solución (tiempo total de entrega de todas las
-    // ventas)
+    // Calcular el fitness de una solución (tiempo total de entrega de todas las ventas)
     private LocalDateTime calcularTiempoLimite(LocalDateTime tiempoBase, String region) {
         switch (region) {
             case "COSTA":
-                return safePlusHours(tiempoBase, (long) 24);
+                return tiempoBase.plusHours(24);
             case "SIERRA":
-                return safePlusHours(tiempoBase, (long) 48);
+                return tiempoBase.plusHours(48);
             case "SELVA":
-                return safePlusHours(tiempoBase, (long) 72);
+                return tiempoBase.plusHours(72);
             default:
                 throw new IllegalArgumentException("Región desconocida: " + region);
         }
     }
 
     // Método para calcular la distancia mínima entre dos oficinas usando Dijkstra
-    private Map.Entry<Double, List<Route>> calculateRouteDistance(Office origin, Office destination,
-            LocalDateTime startDateTime) {
+    private Map.Entry<Double, List<Route>> calculateRouteDistance(Office origin, Office destination, LocalDateTime startDateTime) {
         Map<Office, Double> distances = new HashMap<>();
         Map<Office, Boolean> visited = new HashMap<>();
         Map<Office, Route> previousRoute = new HashMap<>();
@@ -470,38 +484,28 @@ public class SimulatedAnnealing {
     }
 
     private double obtenerVelocidad(String regionOrigen, String regionDestino) {
-        if (regionOrigen == null || regionDestino == null) {
-            System.out.println("Región de origen o destino es nula.");
-            return 60.0; // Velocidad por defecto
-        }
+        // Normalizamos los nombres de las regiones para hacer las comparaciones más robustas
+        String regionOrigenNormalizada = regionOrigen.trim().substring(0, 1).toUpperCase() + regionOrigen.trim().substring(1).toLowerCase();
+        String regionDestinoNormalizada = regionDestino.trim().substring(0, 1).toUpperCase() + regionDestino.trim().substring(1).toLowerCase();
 
-        // Normalizar los nombres de las regiones para comparaciones más robustas
-        String regionOrigenNormalizada = regionOrigen.trim().substring(0, 1).toUpperCase()
-                + regionOrigen.trim().substring(1).toLowerCase();
-        String regionDestinoNormalizada = regionDestino.trim().substring(0, 1).toUpperCase()
-                + regionDestino.trim().substring(1).toLowerCase();
-
-        // Buscar en la lista global de velocidades
+        // Buscar la velocidad en la lista cargada
         for (Velocidad velocidad : velocidades) {
-            // Comparar regiones de origen y destino en ambas direcciones
-            if ((velocidad.getRegion1().equals(regionOrigenNormalizada)
-                    && velocidad.getRegion2().equals(regionDestinoNormalizada))
-                    || (velocidad.getRegion1().equals(regionDestinoNormalizada)
-                            && velocidad.getRegion2().equals(regionOrigenNormalizada))) {
+            // Comparamos las regiones de origen y destino en ambas direcciones (región 1 a región 2 y viceversa)
+            if ((velocidad.getRegion1().equals(regionOrigenNormalizada) && velocidad.getRegion2().equals(regionDestinoNormalizada))
+                    || (velocidad.getRegion1().equals(regionDestinoNormalizada) && velocidad.getRegion2().equals(regionOrigenNormalizada))) {
                 return velocidad.getVelocidad(); // Devolver la velocidad encontrada
             }
         }
 
-        // Si no se encuentra una velocidad para las regiones dadas, devolver 60.0 por
-        // defecto
+        // Si no se encuentra una velocidad para las regiones dadas, devolver 60.0 por defecto
         return 60.0;
     }
 
     // Manejar el caso en que no se encuentra un camión adecuado
     private void calcularCamiones(List<Envio> envios, List<Camion> camiones) {
-
+       
         for (int i = camiones.size(); i < envios.size(); i++) {
-
+    
             Envio envio = envios.get(i);
             Sale sale = envio.getCamion().getPedidos().isEmpty() ? null : envio.getCamion().getPedidos().get(0);
 
@@ -510,30 +514,27 @@ public class SimulatedAnnealing {
                         .filter(camion -> camion.getCodigo().equals(envio.getCamion().getCodigo()))
                         .findFirst()
                         .orElse(null);
-                Camion camion_final = camionActual;
+                Camion camion_final=camionActual;
                 boolean camionAsignado = false;
+                
 
                 // Verificar si el camión actual cumple con las condiciones
-                if ((camionActual.getFechaSalida() == null
-                        || camionActual.getFechaSalida().isBefore(envio.getTiempoSalida()))
+                if ((camionActual.getFechaSalida() == null || camionActual.getFechaSalida().isBefore(envio.getTiempoSalida()))
                         && camionActual.getCapacidad() >= envio.getCapacidadRestante()) {
-                    camionActual.setFechaSalida(safePlusHours(envio.getTiempoLlegada(), (long) 2));
-                    camion_final = camionActual;
+                    camionActual.setFechaSalida(envio.getTiempoLlegada().plusHours(2));
+                    camion_final=camionActual;
                     camionAsignado = true;
-
+                    
                 } else {
-
+                    
                     // Buscar otro camión adecuado
                     for (Camion camion : camiones) {
-                        int sumaCantidadesPedidos = envio.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity)
-                                .sum();
-                        if ((camion.getFechaSalida() == null
-                                || camion.getFechaSalida().isBefore(envio.getTiempoSalida()))
+                        int sumaCantidadesPedidos = envio.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum();
+                        if ((camion.getFechaSalida() == null || camion.getFechaSalida().isBefore(envio.getTiempoSalida()))
                                 && camion.getCapacidad() >= sumaCantidadesPedidos) {
-
+                           
                             // Reemplazar los datos del camión
-                            Camion nuevoCamion = new Camion(camion.getCapacidad(), camion.getCodigo(),
-                                    camion.getInicio(), new ArrayList<>(), new ArrayList<>());
+                            Camion nuevoCamion = new Camion(camion.getCapacidad(), camion.getCodigo(), camion.getInicio(), new ArrayList<>(), new ArrayList<>());
                             nuevoCamion.getDem_Pedidos().addAll(envio.getCamion().getDem_Pedidos());
                             nuevoCamion.getDist_Pedidos().addAll(envio.getCamion().getDist_Pedidos());
                             nuevoCamion.getPedidos().addAll(envio.getCamion().getPedidos());
@@ -541,22 +542,20 @@ public class SimulatedAnnealing {
 
                             envio.setCamion(nuevoCamion);
                             envio.setCapacidadRestante(camion.getCapacidad() - sumaCantidadesPedidos);
-
+                            
                             // Iterar sobre los pedidos del nuevo camión
                             double tiempoTotal = 0.0;
                             Office origen = nuevoCamion.getInicio();
                             if (origen.equals(camion.getInicio())) {
                                 // Sumar todos los valores de la lista dem_Pedidos del camión
                                 tiempoTotal = camion.getDem_Pedidos().get(camion.getDem_Pedidos().size() - 1);
-                                camion.setFechaSalida(safePlusHours(envio.getTiempoLlegada(), (long) 2));
-                                camion_final = camion;
+                                camion.setFechaSalida(envio.getTiempoLlegada().plusHours((long) 2));
+                                camion_final=camion;
                             } else {
                                 Sale primerPedido = envio.getCamion().getPedidos().get(0);
-                                Map.Entry<Double, List<Route>> result = calculateRouteDistance(origen,
-                                        primerPedido.getDestination(), envio.getTiempoSalida());
+                                Map.Entry<Double, List<Route>> result = calculateRouteDistance(origen, primerPedido.getDestination(),envio.getTiempoSalida());
                                 double distancia = result.getKey();
-                                double velocidad = obtenerVelocidad(origen.getRegion(),
-                                        primerPedido.getDestination().getRegion());
+                                double velocidad = obtenerVelocidad(origen.getRegion(), primerPedido.getDestination().getRegion());
                                 double tiempoLlegada = distancia / velocidad;
 
                                 tiempoTotal += tiempoLlegada;
@@ -567,22 +566,19 @@ public class SimulatedAnnealing {
                                     Sale Prev = envio.getCamion().getPedidos().get(j);
                                     Sale pedido = envio.getCamion().getPedidos().get(j);
                                     distnacia_total = envio.getCamion().getDist_Pedidos().get(j);
-                                    velocidad = obtenerVelocidad(Prev.getOrigin().getRegion(),
-                                            pedido.getDestination().getRegion());
+                                    velocidad = obtenerVelocidad(Prev.getOrigin().getRegion(), pedido.getDestination().getRegion());
                                     tiempoLlegada = distancia / velocidad;
                                     tiempoTotal += tiempoLlegada;
                                     envio.getCamion().getDem_Pedidos().set(j, tiempoTotal);
                                     envio.getCamion().getDist_Pedidos().set(j, distancia);
                                 }
-                                // Calcular la distancia entre el origen del camión y el destino del primer
-                                // pedido
-                                LocalDateTime tiempoLlegadaEstimado = safePlusHours(envio.getTiempoSalida(),
-                                        (long) tiempoTotal);
+                                // Calcular la distancia entre el origen del camión y el destino del primer pedido
+                                LocalDateTime tiempoLlegadaEstimado = envio.getTiempoSalida().plusHours((long) tiempoTotal);
                                 envio.setTiempoLlegada(tiempoLlegadaEstimado);
-                                nuevoCamion.setFechaSalida(safePlusHours(tiempoLlegadaEstimado, (long) 2));
-                                camion.setFechaSalida(safePlusHours(tiempoLlegadaEstimado, (long) 2));
+                                nuevoCamion.setFechaSalida(tiempoLlegadaEstimado.plusHours(2));
+                                camion.setFechaSalida(tiempoLlegadaEstimado.plusHours(2));
                                 envio.setDemora(tiempoTotal);
-                                camion_final = camion;
+                                camion_final=camion;
                             }
 
                             // Actualizar tiempoLlegada del envío y FechaSalida del nuevo camión
@@ -595,57 +591,58 @@ public class SimulatedAnnealing {
 
                 // Si no se pudo asignar un camión, manejar el caso aquí (opcional)
                 if (!camionAsignado) {
-                    // Manejar el caso en que no se encuentra un camión adecuado
-                    System.out.println("Colapso logístico: No se encontró un camión adecuado para el envío.");
-                } else {
-                    // Calcular la menor distancia para el camión después de entregar la ruta
-                    Office lima = findOfficeByCode(offices, "040201");
-                    Office trujillo = findOfficeByCode(offices, "130101");
-                    Office arequipa = findOfficeByCode(offices, "040101");
+                // Manejar el caso en que no se encuentra un camión adecuado
+                System.out.println("Colapso logístico: No se encontró un camión adecuado para el envío.");
+            } else {
+                // Calcular la menor distancia para el camión después de entregar la ruta
+                Office lima = findOfficeByCode(offices, "040201");
+                Office trujillo = findOfficeByCode(offices, "130101");
+                Office arequipa = findOfficeByCode(offices, "040101");
 
-                    Office destinoFinal = sale.getDestination();
-                    Office mejorOficina = null;
-                    double menorDistancia = Double.MAX_VALUE;
+                Office destinoFinal = sale.getDestination();
+                Office mejorOficina = null;
+                double menorDistancia = Double.MAX_VALUE;
 
-                    // Calcular la distancia a Lima
-                    Map.Entry<Double, List<Route>> distanciaLima = calculateRouteDistance(destinoFinal, lima,
-                            envio.getTiempoLlegada());
-                    if (distanciaLima.getKey() < menorDistancia) {
-                        menorDistancia = distanciaLima.getKey();
-                        mejorOficina = lima;
-                    }
-
-                    // Calcular la distancia a Trujillo
-                    Map.Entry<Double, List<Route>> distanciaTrujillo = calculateRouteDistance(destinoFinal, trujillo,
-                            envio.getTiempoLlegada());
-                    if (distanciaTrujillo.getKey() < menorDistancia) {
-                        menorDistancia = distanciaTrujillo.getKey();
-                        mejorOficina = trujillo;
-                    }
-
-                    // Calcular la distancia a Arequipa
-                    Map.Entry<Double, List<Route>> distanciaArequipa = calculateRouteDistance(destinoFinal, arequipa,
-                            envio.getTiempoLlegada());
-                    if (distanciaArequipa.getKey() < menorDistancia) {
-                        menorDistancia = distanciaArequipa.getKey();
-                        mejorOficina = arequipa;
-                    }
-
-                    // Actualizar el origen del camión con la mejor oficina encontrada
-                    if (mejorOficina != null) {
-                        envio.getCamion().setInicio(mejorOficina);
-                        camion_final.setInicio(mejorOficina);
-                    }
+                // Calcular la distancia a Lima
+                Map.Entry<Double, List<Route>> distanciaLima = calculateRouteDistance(destinoFinal, lima, envio.getTiempoLlegada());
+                if (distanciaLima.getKey() < menorDistancia) {
+                    menorDistancia = distanciaLima.getKey();
+                    mejorOficina = lima;
                 }
+
+                // Calcular la distancia a Trujillo
+                Map.Entry<Double, List<Route>> distanciaTrujillo = calculateRouteDistance(destinoFinal, trujillo, envio.getTiempoLlegada());
+                if (distanciaTrujillo.getKey() < menorDistancia) {
+                    menorDistancia = distanciaTrujillo.getKey();
+                    mejorOficina = trujillo;
+                }
+
+                // Calcular la distancia a Arequipa
+                Map.Entry<Double, List<Route>> distanciaArequipa = calculateRouteDistance(destinoFinal, arequipa, envio.getTiempoLlegada());
+                if (distanciaArequipa.getKey() < menorDistancia) {
+                    menorDistancia = distanciaArequipa.getKey();
+                    mejorOficina = arequipa;
+                }
+
+                // Actualizar el origen del camión con la mejor oficina encontrada
+                if (mejorOficina != null) {
+                    envio.getCamion().setInicio(mejorOficina);
+                    camion_final.setInicio(mejorOficina);
+                }
+            }
             }
         }
     }
 
+
     private double calculateFitness(List<Envio> envios) {
+
         double totalFitness = 0.0;
         double maxPenalty = Double.MAX_VALUE; // Valor máximo para penalizar diferencias negativas
+        double avl = 0.0; // Valor máximo para penalizar diferencias negativas
         double f = 0;
         for (Envio envio : envios) {
+            avl=0;
             f++;
             List<Sale> pedidos = envio.getCamion().getPedidos();
             LocalDateTime tiempoSalida = envio.getTiempoSalida();
@@ -656,15 +653,13 @@ public class SimulatedAnnealing {
             if (!pedidos.isEmpty()) {
                 for (int i = 0; i < pedidos.size(); i++) {
                     Sale sale = pedidos.get(i);
-                    LocalDateTime tiempoLimite = calcularTiempoLimite(sale.getDateTime(),
-                            sale.getDestination().getRegion());
+                    LocalDateTime tiempoLimite = calcularTiempoLimite(sale.getDateTime(), sale.getDestination().getRegion());
                     double demora = demoras.get(i);
 
                     // Verificar si la ruta ya está en la lista de rutas del camión
                     Office origen = (i == 0) ? envio.getCamion().getInicio() : pedidos.get(i - 1).getDestination();
                     boolean tramoExistente = envio.getCamion().getRutas().stream()
-                            .anyMatch(ruta -> ruta.getOrigin().equals(origen)
-                                    && ruta.getDestination().equals(sale.getDestination()));
+                            .anyMatch(ruta -> ruta.getOrigin().equals(origen) && ruta.getDestination().equals(sale.getDestination()));
 
                     double diferencia = 0;
                     if (tiempoSalida == null || envio.getTiempoLlegada() == null) {
@@ -677,180 +672,156 @@ public class SimulatedAnnealing {
                             // Si el tramo no existe, considerar la demora
                             diferencia = calcularDiferenciaEnHoras(tiempoSalida, tiempoLimite, demora);
                         }
+                        
                     }
 
-                    if (diferencia < -1) {
-                        totalFitness += maxPenalty; // Penalizar diferencias negativas
-                    } else {
-                        totalFitness += Math.max(0, diferencia);
-                    }
+                    avl+=diferencia;
+                    totalFitness += diferencia;
                 }
             }
+            envio.setSolucion(avl);
         }
-        if (totalFitness < 100000000000000.00) {
-            totalFitness = totalFitness + 0.1;
+        if(totalFitness<100000000000000.00){
+            totalFitness=totalFitness+0.1;
         }
         return totalFitness;
     }
 
-    private double calcularDiferenciaEnHoras(LocalDateTime tiempoSalida, LocalDateTime tiempoLimite,
-            double tiempoDeDemoraEnHoras) {
+    private double calcularDiferenciaEnHoras(LocalDateTime tiempoSalida, LocalDateTime tiempoLimite, double tiempoDeDemoraEnHoras) {
         long horasHastaLimite = ChronoUnit.HOURS.between(tiempoSalida, tiempoLimite);
         return horasHastaLimite - tiempoDeDemoraEnHoras;
     }
 
-    // Generar un vecino modificando la solución actual (intercambiar dos ventas
-    // aleatoriamente)
+    // Generar un vecino modificando la solución actual (intercambiar dos ventas aleatoriamente)
     private List<Envio> generateNeighbor(List<Envio> currentSolution, List<Camion> camiones) {
-        List<Envio> neighbor = deepCopyEnvios(currentSolution);
-        Random random = new Random();
+    List<Envio> neighbor = deepCopyEnvios(currentSolution);
+    Random random = new Random();
 
-        // Realizar múltiples intercambios para diversificar más el vecino
-        // Realiza 3 intercambios aleatorios
-        int envioIndex1 = random.nextInt(neighbor.size());
-        int envioIndex2 = random.nextInt(neighbor.size());
-        while (envioIndex1 == envioIndex2) {
-            envioIndex2 = random.nextInt(neighbor.size());
-        }
-        Envio envio1 = neighbor.get(envioIndex1);
-        Envio envio2 = neighbor.get(envioIndex2);
-        List<Sale> pedidos1 = envio1.getCamion().getPedidos();
-        List<Sale> pedidos2 = envio2.getCamion().getPedidos();
-
-        if (!pedidos1.isEmpty() && !pedidos2.isEmpty()) {
-            int saleIndex1 = random.nextInt(pedidos1.size());
-            int saleIndex2 = random.nextInt(pedidos2.size());
-            Sale sale1 = pedidos1.get(saleIndex1);
-            Sale sale2 = pedidos2.get(saleIndex2);
-
-            // Calcular la capacidad restante y la capacidad total de los pedidos
-            double capacidadRestante1 = envio1.getCamion().getCapacidad();
-            double capacidadRestante2 = envio2.getCamion().getCapacidad();
-            double totalPedidos1 = pedidos1.stream().mapToDouble(Sale::getQuantity).sum();
-            double totalPedidos2 = pedidos2.stream().mapToDouble(Sale::getQuantity).sum();
-            if (totalPedidos1 - sale1.getQuantity() + sale2.getQuantity() <= capacidadRestante1 &&
-                    totalPedidos2 - sale2.getQuantity() + sale1.getQuantity() <= capacidadRestante2 &&
-                    (sale2.getDateTime().isAfter(envio1.getCamion().getSalida_minima())
-                            || sale2.getDateTime().isEqual(envio1.getCamion().getSalida_minima()))
-                    &&
-                    (sale1.getDateTime().isAfter(envio2.getCamion().getSalida_minima())
-                            || sale1.getDateTime().isEqual(envio2.getCamion().getSalida_minima()))) {
-
-                // Intercambiar ventas entre dos envíos
-                Sale temp = pedidos1.get(saleIndex1);
-                pedidos1.set(saleIndex1, pedidos2.get(saleIndex2));
-                pedidos2.set(saleIndex2, temp);
-                envio1.setCapacidadRestante(-envio1.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum()
-                        + envio1.getCamion().getCapacidad());
-                envio2.setCapacidadRestante(-envio2.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum()
-                        + envio2.getCamion().getCapacidad());
-                // Actualizar tiempoSalida de los envíos
-                envio1.setTiempoSalida(findLatestDate(pedidos1));
-                envio2.setTiempoSalida(findLatestDate(pedidos2));
-
-                // Recalcular la demora y otros atributos
-                recalcularDemora(envio1, currentSolution, camiones, envioIndex1);
-                recalcularDemora(envio2, currentSolution, camiones, envioIndex2);
-            }
-        } else if (pedidos1.isEmpty() && !pedidos2.isEmpty()) {
-            int saleIndex2 = random.nextInt(pedidos2.size());
-            Sale sale2 = pedidos2.get(saleIndex2);
-
-            // Calcular la capacidad restante y la capacidad total de los pedidos
-            double capacidadRestante1 = envio1.getCamion().getCapacidad();
-            double totalPedidos2 = pedidos2.stream().mapToDouble(Sale::getQuantity).sum();
-            if (totalPedidos2 - sale2.getQuantity() <= capacidadRestante1) {
-                if (envio1.getCamion().getSalida_minima() == null) {
-                    // Mover venta de pedidos2 a pedidos1
-                    pedidos1.add(sale2);
-                    pedidos2.remove(saleIndex2);
-                    envio1.setCapacidadRestante(
-                            -envio1.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum()
-                                    + envio1.getCamion().getCapacidad());
-                    envio2.setCapacidadRestante(
-                            -envio2.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum()
-                                    + envio2.getCamion().getCapacidad());
-                    // Actualizar tiempoSalida de los envíos
-                    envio1.setTiempoSalida(findLatestDate(pedidos1));
-                    envio2.setTiempoSalida(findLatestDate(pedidos2));
-
-                    // Recalcular la demora y otros atributos
-                    recalcularDemora(envio1, currentSolution, camiones, envioIndex1);
-                    recalcularDemora(envio2, currentSolution, camiones, envioIndex2);
-                } else {
-                    if ((sale2.getDateTime().isAfter(envio1.getCamion().getSalida_minima())
-                            || sale2.getDateTime().isEqual(envio1.getCamion().getSalida_minima()))) {
-                        // Mover venta de pedidos2 a pedidos1
-                        pedidos1.add(sale2);
-                        pedidos2.remove(saleIndex2);
-                        envio1.setCapacidadRestante(
-                                -envio1.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum()
-                                        + envio1.getCamion().getCapacidad());
-                        envio2.setCapacidadRestante(
-                                -envio2.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum()
-                                        + envio2.getCamion().getCapacidad());
-                        // Actualizar tiempoSalida de los envíos
-                        envio1.setTiempoSalida(findLatestDate(pedidos1));
-                        envio2.setTiempoSalida(findLatestDate(pedidos2));
-
-                        // Recalcular la demora y otros atributos
-                        recalcularDemora(envio1, currentSolution, camiones, envioIndex1);
-                        recalcularDemora(envio2, currentSolution, camiones, envioIndex2);
-                    }
-                }
-            }
-        } else if (!pedidos1.isEmpty() && pedidos2.isEmpty()) {
-
-            int saleIndex1 = random.nextInt(pedidos1.size());
-            Sale sale1 = pedidos1.get(saleIndex1);
-
-            // Calcular la capacidad restante y la capacidad total de los pedidos
-            double capacidadRestante2 = envio2.getCamion().getCapacidad();
-            double totalPedidos1 = pedidos1.stream().mapToDouble(Sale::getQuantity).sum();
-            if (totalPedidos1 - sale1.getQuantity() <= capacidadRestante2) {
-                if (envio2.getCamion().getSalida_minima() == null) {
-                    // Mover venta de pedidos1 a pedidos2
-                    pedidos2.add(sale1);
-                    pedidos1.remove(saleIndex1);
-                    envio1.setCapacidadRestante(
-                            -envio1.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum()
-                                    + envio1.getCamion().getCapacidad());
-                    envio2.setCapacidadRestante(
-                            -envio2.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum()
-                                    + envio2.getCamion().getCapacidad());
-                    // Actualizar tiempoSalida de los envíos
-                    envio1.setTiempoSalida(findLatestDate(pedidos1));
-                    envio2.setTiempoSalida(findLatestDate(pedidos2));
-
-                    // Recalcular la demora y otros atributos
-                    recalcularDemora(envio1, currentSolution, camiones, envioIndex1);
-                    recalcularDemora(envio2, currentSolution, camiones, envioIndex2);
-                } else {
-                    if ((sale1.getDateTime().isAfter(envio2.getCamion().getSalida_minima())
-                            || sale1.getDateTime().isEqual(envio2.getCamion().getSalida_minima()))) {
-                        // Mover venta de pedidos1 a pedidos2
-                        pedidos2.add(sale1);
-                        pedidos1.remove(saleIndex1);
-                        envio1.setCapacidadRestante(
-                                -envio1.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum()
-                                        + envio1.getCamion().getCapacidad());
-                        envio2.setCapacidadRestante(
-                                -envio2.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum()
-                                        + envio2.getCamion().getCapacidad());
-                        // Actualizar tiempoSalida de los envíos
-                        envio1.setTiempoSalida(findLatestDate(pedidos1));
-                        envio2.setTiempoSalida(findLatestDate(pedidos2));
-
-                        // Recalcular la demora y otros atributos
-                        recalcularDemora(envio1, currentSolution, camiones, envioIndex1);
-                        recalcularDemora(envio2, currentSolution, camiones, envioIndex2);
-                    }
-                }
-            }
-        }
-
-        return neighbor;
+    // Realizar múltiples intercambios para diversificar más el vecino
+    // Realiza 3 intercambios aleatorios
+    int envioIndex1 = random.nextInt(neighbor.size());
+    int envioIndex2 = random.nextInt(neighbor.size());
+    while (envioIndex1 == envioIndex2) {
+        envioIndex2 = random.nextInt(neighbor.size());
     }
+    Envio envio1 = neighbor.get(envioIndex1);
+    Envio envio2 = neighbor.get(envioIndex2);
+    List<Sale> pedidos1 = envio1.getCamion().getPedidos();
+    List<Sale> pedidos2 = envio2.getCamion().getPedidos();
+
+    if (!pedidos1.isEmpty() && !pedidos2.isEmpty()) {
+        int saleIndex1 = random.nextInt(pedidos1.size());
+        int saleIndex2 = random.nextInt(pedidos2.size());
+        Sale sale1 = pedidos1.get(saleIndex1);
+        Sale sale2 = pedidos2.get(saleIndex2);
+
+        // Calcular la capacidad restante y la capacidad total de los pedidos
+        double capacidadRestante1 = envio1.getCamion().getCapacidad();
+        double capacidadRestante2 = envio2.getCamion().getCapacidad();
+        double totalPedidos1 = pedidos1.stream().mapToDouble(Sale::getQuantity).sum();
+        double totalPedidos2 = pedidos2.stream().mapToDouble(Sale::getQuantity).sum();
+        if (totalPedidos1 - sale1.getQuantity() + sale2.getQuantity() <= capacidadRestante1 &&
+            totalPedidos2 - sale2.getQuantity() + sale1.getQuantity() <= capacidadRestante2 &&
+            (sale2.getDateTime().isAfter(envio1.getCamion().getSalida_minima()) || sale2.getDateTime().isEqual(envio1.getCamion().getSalida_minima())) &&
+            (sale1.getDateTime().isAfter(envio2.getCamion().getSalida_minima()) || sale1.getDateTime().isEqual(envio2.getCamion().getSalida_minima()))) {
+
+            // Intercambiar ventas entre dos envíos
+            Sale temp = pedidos1.get(saleIndex1);
+            pedidos1.set(saleIndex1, pedidos2.get(saleIndex2));
+            pedidos2.set(saleIndex2, temp);
+            envio1.setCapacidadRestante(-envio1.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum() + envio1.getCamion().getCapacidad());
+            envio2.setCapacidadRestante(-envio2.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum() + envio2.getCamion().getCapacidad());
+            // Actualizar tiempoSalida de los envíos
+            envio1.setTiempoSalida(findLatestDate(pedidos1));
+            envio2.setTiempoSalida(findLatestDate(pedidos2));
+
+            // Recalcular la demora y otros atributos
+            recalcularDemora(envio1, currentSolution, camiones, envioIndex1);
+            recalcularDemora(envio2, currentSolution, camiones, envioIndex2);
+        }
+    } else if (pedidos1.isEmpty() && !pedidos2.isEmpty()) {
+        int saleIndex2 = random.nextInt(pedidos2.size());
+        Sale sale2 = pedidos2.get(saleIndex2);
+
+        // Calcular la capacidad restante y la capacidad total de los pedidos
+        double capacidadRestante1 = envio1.getCamion().getCapacidad();
+        double totalPedidos2 = pedidos2.stream().mapToDouble(Sale::getQuantity).sum();
+        if (totalPedidos2 - sale2.getQuantity() <= capacidadRestante1) {
+            if(envio1.getCamion().getSalida_minima()==null){
+                // Mover venta de pedidos2 a pedidos1
+            pedidos1.add(sale2);
+            pedidos2.remove(saleIndex2);
+            envio1.setCapacidadRestante(-envio1.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum() + envio1.getCamion().getCapacidad());
+            envio2.setCapacidadRestante(-envio2.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum() + envio2.getCamion().getCapacidad());
+            // Actualizar tiempoSalida de los envíos
+            envio1.setTiempoSalida(findLatestDate(pedidos1));
+            envio2.setTiempoSalida(findLatestDate(pedidos2));
+
+            // Recalcular la demora y otros atributos
+            recalcularDemora(envio1, currentSolution, camiones, envioIndex1);
+            recalcularDemora(envio2, currentSolution, camiones, envioIndex2);
+            }
+            else{
+                if((sale2.getDateTime().isAfter(envio1.getCamion().getSalida_minima()) || sale2.getDateTime().isEqual(envio1.getCamion().getSalida_minima()))){
+                    // Mover venta de pedidos2 a pedidos1
+            pedidos1.add(sale2);
+            pedidos2.remove(saleIndex2);
+            envio1.setCapacidadRestante(-envio1.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum() + envio1.getCamion().getCapacidad());
+            envio2.setCapacidadRestante(-envio2.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum() + envio2.getCamion().getCapacidad());
+            // Actualizar tiempoSalida de los envíos
+            envio1.setTiempoSalida(findLatestDate(pedidos1));
+            envio2.setTiempoSalida(findLatestDate(pedidos2));
+
+            // Recalcular la demora y otros atributos
+            recalcularDemora(envio1, currentSolution, camiones, envioIndex1);
+            recalcularDemora(envio2, currentSolution, camiones, envioIndex2);
+                }
+            }
+        }
+    } else if (!pedidos1.isEmpty() && pedidos2.isEmpty()) {
+        
+        int saleIndex1 = random.nextInt(pedidos1.size());
+        Sale sale1 = pedidos1.get(saleIndex1);
+
+        // Calcular la capacidad restante y la capacidad total de los pedidos
+        double capacidadRestante2 = envio2.getCamion().getCapacidad();
+        double totalPedidos1 = pedidos1.stream().mapToDouble(Sale::getQuantity).sum();
+        if (totalPedidos1 - sale1.getQuantity() <= capacidadRestante2) {
+            if(envio2.getCamion().getSalida_minima()==null){
+                // Mover venta de pedidos1 a pedidos2
+            pedidos2.add(sale1);
+            pedidos1.remove(saleIndex1);
+            envio1.setCapacidadRestante(-envio1.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum() + envio1.getCamion().getCapacidad());
+            envio2.setCapacidadRestante(-envio2.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum() + envio2.getCamion().getCapacidad());
+            // Actualizar tiempoSalida de los envíos
+            envio1.setTiempoSalida(findLatestDate(pedidos1));
+            envio2.setTiempoSalida(findLatestDate(pedidos2));
+
+            // Recalcular la demora y otros atributos
+            recalcularDemora(envio1, currentSolution, camiones, envioIndex1);
+            recalcularDemora(envio2, currentSolution, camiones, envioIndex2);
+            }
+            else{
+                if((sale1.getDateTime().isAfter(envio2.getCamion().getSalida_minima()) || sale1.getDateTime().isEqual(envio2.getCamion().getSalida_minima()))){
+                     // Mover venta de pedidos1 a pedidos2
+            pedidos2.add(sale1);
+            pedidos1.remove(saleIndex1);
+            envio1.setCapacidadRestante(-envio1.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum() + envio1.getCamion().getCapacidad());
+            envio2.setCapacidadRestante(-envio2.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum() + envio2.getCamion().getCapacidad());
+            // Actualizar tiempoSalida de los envíos
+            envio1.setTiempoSalida(findLatestDate(pedidos1));
+            envio2.setTiempoSalida(findLatestDate(pedidos2));
+
+            // Recalcular la demora y otros atributos
+            recalcularDemora(envio1, currentSolution, camiones, envioIndex1);
+            recalcularDemora(envio2, currentSolution, camiones, envioIndex2);
+                }
+            }
+        }
+    }
+
+    return neighbor;
+}
 
     private List<Envio> deepCopyEnvios(List<Envio> original) {
         List<Envio> copy = new ArrayList<>();
@@ -858,11 +829,9 @@ public class SimulatedAnnealing {
             Camion originalCamion = envio.getCamion();
             List<Sale> pedidosCopy = new ArrayList<>();
             for (Sale sale : originalCamion.getPedidos()) {
-                pedidosCopy.add(new Sale(sale.getDateTime(), sale.getOrigin(), sale.getDestination(),
-                        sale.getQuantity(), sale.getClientId()));
+                pedidosCopy.add(new Sale(sale.getDateTime(), sale.getOrigin(), sale.getDestination(), sale.getQuantity(), sale.getClientId()));
             }
-            Camion camionCopy = new Camion(originalCamion.getCapacidad(), originalCamion.getCodigo(),
-                    originalCamion.getInicio(), new ArrayList<>(originalCamion.getRutas()), pedidosCopy);
+            Camion camionCopy = new Camion(originalCamion.getCapacidad(), originalCamion.getCodigo(), originalCamion.getInicio(), new ArrayList<>(originalCamion.getRutas()), pedidosCopy);
             Envio envioCopy = new Envio(camionCopy, envio.getTiempoSalida());
             envioCopy.setTiempoLlegada(envio.getTiempoLlegada());
             envioCopy.setDemora(envio.getDemora());
@@ -886,7 +855,7 @@ public class SimulatedAnnealing {
         return latestDate;
     }
 
-    private void recalcularDemora(Envio envio, List<Envio> envios, List<Camion> camiones, int envioIndex) {
+    private void recalcularDemora(Envio envio, List<Envio> envios, List<Camion> camiones,int envioIndex) {
         Camion camion = envio.getCamion();
         List<Sale> pedidos = camion.getPedidos();
         List<Double> dem_Pedidos = camion.getDem_Pedidos();
@@ -895,20 +864,19 @@ public class SimulatedAnnealing {
         dem_Pedidos.clear();
         dist_Pedidos.clear();
         if (pedidos.isEmpty()) {
-            envio.setTiempoSalida(null);
-            envio.setTiempoLlegada(null);
-            envio.setDemora(0.0);
-            camion.getRutas().clear();
-            camion.setSalida_minima(null);
-            return;
+        envio.setTiempoSalida(null);
+        envio.setTiempoLlegada(null);
+        envio.setDemora(0.0);
+        camion.getRutas().clear();
+        camion.setSalida_minima(null);
+        return;
         }
         double demoraAcumulada = 0.0;
         Office origen = camion.getInicio();
         LocalDateTime tiempoSalida = findLatestDate(pedidos);
         camion.getRutas().clear();
         for (Sale pedido : pedidos) {
-            Map.Entry<Double, List<Route>> result = calculateRouteDistance(origen, pedido.getDestination(),
-                    tiempoSalida);
+            Map.Entry<Double, List<Route>> result = calculateRouteDistance(origen, pedido.getDestination(),tiempoSalida);
             double distancia = result.getKey();
             List<Route> rutas = result.getValue();
             double velocidad = obtenerVelocidad(origen.getRegion(), pedido.getDestination().getRegion());
@@ -921,13 +889,45 @@ public class SimulatedAnnealing {
             origen = pedido.getDestination();
         }
 
-        LocalDateTime tiempoLlegadaEstimado = safePlusHours(tiempoSalida, (long) demoraAcumulada);
+        LocalDateTime tiempoLlegadaEstimado = tiempoSalida.plusHours((long) demoraAcumulada);
         envio.setTiempoSalida(tiempoSalida);
         envio.setTiempoLlegada(tiempoLlegadaEstimado);
         envio.setDemora(demoraAcumulada);
-        camion.setSalida_minima(safePlusHours(tiempoLlegadaEstimado, 2));
-    }
+        camion.setSalida_minima(tiempoLlegadaEstimado.plusHours(2));
+        
 
+        
+    }
+    // Buscar los siguientes envíos con el mismo código de camión
+        /*
+        for (int i = envioIndex+1; i < envios.size(); i++) {
+            Envio siguienteEnvio = envios.get(i);
+            if (siguienteEnvio.getCamion().getCodigo().equals(camion.getCodigo())) {
+                LocalDateTime tiempoSalidaSiguiente = siguienteEnvio.getTiempoSalida();
+                if (tiempoSalidaSiguiente.isAfter(tiempoLlegadaEstimado.plusHours(2))) {
+                    break;
+                } else {
+                    // Buscar otro camión adecuado
+                    for (Camion nuevoCamion : camiones) {
+                        if (!nuevoCamion.getCodigo().equals(camion.getCodigo())) {
+                            int sumaCantidadesPedidos = siguienteEnvio.getCamion().getPedidos().stream().mapToInt(Sale::getQuantity).sum();
+                            if ((nuevoCamion.getSalida_minima() == null || nuevoCamion.getSalida_minima().isBefore(siguienteEnvio.getTiempoSalida()))
+                                    && nuevoCamion.getCapacidad() >= sumaCantidadesPedidos) {
+
+                                // Reemplazar los datos del camión
+                                Camion camionCopy = new Camion(nuevoCamion.getCapacidad(), nuevoCamion.getCodigo(), nuevoCamion.getInicio(), new ArrayList<>(siguienteEnvio.getCamion().getRutas()), new ArrayList<>(siguienteEnvio.getCamion().getPedidos()));
+                                camionCopy.getDist_Pedidos().addAll(dist_Pedidos);
+                                camionCopy.getDem_Pedidos().addAll(dem_Pedidos);
+                                siguienteEnvio.setCamion(camionCopy);
+                                recalcularDemora(siguienteEnvio, envios, camiones,i);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+*/
     // Determinar si se debe aceptar la nueva solución
     private boolean shouldAcceptSolution(double currentFitness, double neighborFitness) {
         if (neighborFitness > currentFitness) {
@@ -948,13 +948,15 @@ public class SimulatedAnnealing {
     // Imprimir la solución (ventas con origen y destino)
     private void printSolution(List<Envio> solution) {
         int i = 0;
+        cantEnvios=0;
+        promedioFitness=0;
         System.out.println("Detalles de la Solución:");
         for (Envio envio : solution) {
             i++;
             System.out.printf("\n\nEnvio n0:%d", i);
             Camion camion = envio.getCamion();
-            System.out.printf("\nCamión: %s | Capacidad Inicial: %d | Capacidad Restante: %d\n",
-                    camion.getCodigo(), camion.getCapacidad(), envio.getCapacidadRestante());
+            System.out.printf("\nCamión: %s | Capacidad Inicial: %d | Capacidad Restante: %d | Origen%s\n",
+                    camion.getCodigo(), camion.getCapacidad(), envio.getCapacidadRestante(),envio.getCamion().getInicio().getProvince());
             System.out.printf("Tiempo de Salida: %s | Tiempo de Llegada: %s\n",
                     envio.getTiempoSalida(), envio.getTiempoLlegada());
 
@@ -966,24 +968,24 @@ public class SimulatedAnnealing {
                         ruta.getDestination().getUbigeo(),
                         ruta.getDistance());
             }
-
+            
             // Imprimir los detalles de cada venta
             List<Double> demoras = envio.getCamion().getDem_Pedidos();
             for (int j = 0; j < camion.getPedidos().size(); j++) {
                 Sale sale = camion.getPedidos().get(j);
-                System.out.printf(
-                        "  Venta: %s -> %s | Cantidad: %d | Registro de pedido: %s  | Tiempo estimado de llegada: %s\n",
+                System.out.printf("  Venta: %s -> %s | Cantidad: %d | Registro de pedido: %s  | Tiempo estimado de llegada: %s\n",
                         sale.getOrigin().getUbigeo(),
                         sale.getDestination().getUbigeo(),
                         sale.getQuantity(),
                         sale.getDateTime(),
-                        safePlusHours(envio.getTiempoSalida(), (long) demoras.get(j).longValue()));
+                        envio.getTiempoSalida().plusHours(demoras.get(j).longValue()));
             }
+            
         }
+
     }
 
-    // Función para encontrar el envío con el menor valor de tiempoLlegada y
-    // devolver CamionInfo
+    // Función para encontrar el envío con el menor valor de tiempoLlegada y devolver CamionInfo
     private Camion findEnvioWithEarliestArrival(List<Envio> envios, int currentIndex, LocalDateTime tiempoSalida) {
         Envio earliestEnvio = null;
         LocalDateTime earliestArrival = null;
@@ -992,8 +994,7 @@ public class SimulatedAnnealing {
 
         for (int i = 0; i < currentIndex; i++) {
             Envio envio = envios.get(i);
-            if (earliestArrival == null
-                    || (envio.getTiempoLlegada() != null && envio.getTiempoLlegada().isBefore(earliestArrival))) {
+            if (earliestArrival == null || (envio.getTiempoLlegada() != null && envio.getTiempoLlegada().isBefore(earliestArrival))) {
                 earliestEnvio = envio;
                 earliestArrival = envio.getTiempoLlegada();
             }
@@ -1021,7 +1022,7 @@ public class SimulatedAnnealing {
 
         // Buscar un camión disponible
         Camion camionDisponible = findCamionDisponible(envioAveriado);
-
+        
         double bestFitness = bestFitness_;
 
         if (camionDisponible != null) {
@@ -1042,7 +1043,7 @@ public class SimulatedAnnealing {
             }
         } else {
             System.out.println("No hay camiones disponibles para reasignar el envío.");
-        }
+        }       
     }
 
     // Método para encontrar un nuevo camión disponible
@@ -1055,11 +1056,16 @@ public class SimulatedAnnealing {
         }
         return null;
     }
-
-    private LocalDateTime safePlusHours(LocalDateTime dateTime, long hoursToAdd) {
-        // Limita el valor máximo para evitar EpochDay fuera de rango
-        long maxHours = ChronoUnit.HOURS.between(dateTime, LocalDateTime.MAX);
-        long safeHoursToAdd = Math.min(hoursToAdd, maxHours);
-        return dateTime.plusHours(safeHoursToAdd);
+    public static void escribirProximosEnvios(List<Envio> bestSolution) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("proxenvios.txt"))) {
+            for (Envio envio : bestSolution) {
+                String codigoCamion = envio.getCamion().getCodigo();
+                LocalDateTime tiempoSalida = envio.getCamion().getSalida_minima();
+                writer.write("Código del camión: " + codigoCamion + ", Fecha de próxima salida: " + tiempoSalida);
+                writer.newLine();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

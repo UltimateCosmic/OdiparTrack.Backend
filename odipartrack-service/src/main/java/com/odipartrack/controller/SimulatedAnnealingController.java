@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.PostMapping;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -50,6 +52,7 @@ public class SimulatedAnnealingController {
         List<Route> routes = routeService.obtenerRutas();
         List<Block> bloqueos = bloqueoService.obtenerBloqueos();
         List<Sale> sales = saleService.obtenerPedidosPorFecha(startDatetime);
+        bloqueos = filtrarBloqueos(bloqueos, sales);
         List<Camion> camiones = camionService.obtenerCamiones();
         List<Envio> envios = envioService.obtenerEnvios();
 
@@ -71,5 +74,26 @@ public class SimulatedAnnealingController {
          */
 
         return enviosPlanificacion;
+    }
+
+    private List<Block> filtrarBloqueos(List<Block> bloqueos, List<Sale> sales) {
+
+        LocalDateTime firstSaleDate = sales.get(0).getDateTime();
+        LocalDateTime lastSaleDate = sales.get(sales.size() - 1).getDateTime();
+        List<Block> bloqueosFiltrados = new ArrayList<>();
+
+        for (Block bloqueo : bloqueos) {
+
+            LocalDateTime startDateTime = bloqueo.getStart();
+            LocalDateTime endDateTime = bloqueo.getEnd();
+
+            if ((firstSaleDate.isAfter(startDateTime) && firstSaleDate.isBefore(endDateTime)) ||
+                    (lastSaleDate.isAfter(startDateTime) && lastSaleDate.isBefore(endDateTime)) ||
+                    (startDateTime.isAfter(firstSaleDate) && endDateTime.isBefore(lastSaleDate))) {
+                bloqueosFiltrados.add(bloqueo);
+
+            }            
+        }
+        return bloqueosFiltrados;
     }
 }
