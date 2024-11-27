@@ -42,6 +42,7 @@ public class SimulatedAnnealingController {
 
     @PostMapping("/best-solution")
     public List<Envio> getBestSolution(@RequestParam("fechaHora") String fechaHora) {
+
         // Parsear la fecha y hora del parámetro
         LocalDateTime startDatetime = LocalDateTime.parse(fechaHora);
 
@@ -49,29 +50,18 @@ public class SimulatedAnnealingController {
         List<Office> offices = officeService.obtenerOficinas();
         List<Velocidad> velocidades = velocidadService.obtenerVelocidades();
         List<Route> routes = routeService.obtenerRutas();
-        leerDistanciasRutas(routes);
         List<Block> bloqueos = bloqueoService.obtenerBloqueos();
         List<Sale> sales = saleService.obtenerPedidosPorFecha(startDatetime);
-        bloqueos = filtrarBloqueos(bloqueos, sales);
         List<Camion> camiones = camionService.obtenerCamiones();
         List<Envio> envios = envioService.obtenerEnvios();
 
-        /*
-         * -- *** ANTES DE EMPEZAR EJECUCIÓN
-         * -- Asignar Distancia
-         */
+        // Asignar distancia y filtrar bloqueos por pedidos
+        leerDistanciasRutas(routes);
+        bloqueos = filtrarBloqueos(bloqueos, sales);
 
         // Planificación de envios (front)
         List<Envio> enviosPlanificacion = simulatedAnnealingService.getBestSolution(sales, routes, offices, velocidades,
                 bloqueos, camiones, envios);
-
-        /*
-         * -- *** DESPUÉS DE C/PLANIFICACIÓN
-         * -- Actualizar (CAMION): Tiempo_nuevo_envio
-         * -- Insertar (ENVIO)
-         * -- Actualizar (PEDIDOS): Envio + Camion
-         * -- Actualizar (RUTAXSPEDIDOS): Pedido + Ruta
-         */
 
         return enviosPlanificacion;
     }
@@ -92,7 +82,7 @@ public class SimulatedAnnealingController {
                     (startDateTime.isAfter(firstSaleDate) && endDateTime.isBefore(lastSaleDate))) {
                 bloqueosFiltrados.add(bloqueo);
 
-            }            
+            }
         }
         return bloqueosFiltrados;
     }
@@ -102,19 +92,20 @@ public class SimulatedAnnealingController {
             Office start = route.getOrigin();
             Office end = route.getDestination();
             double distance = calculateDistance(start.getLatitude(), start.getLongitude(),
-                        end.getLatitude(), end.getLongitude());
+                    end.getLatitude(), end.getLongitude());
             route.setDistance(distance);
         }
     }
 
-    // Método para calcular la distancia entre dos puntos geográficos usando la fórmula de Haversine
+    // Método para calcular la distancia entre dos puntos geográficos usando la
+    // fórmula de Haversine
     private static double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
         final int R = 6371; // Radio de la Tierra en kilómetros
         double latDistance = Math.toRadians(lat2 - lat1);
         double lonDistance = Math.toRadians(lon2 - lon1);
         double a = Math.sin(latDistance / 2) * Math.sin(latDistance / 2)
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
+                        * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c; // Distancia en kilómetros
     }

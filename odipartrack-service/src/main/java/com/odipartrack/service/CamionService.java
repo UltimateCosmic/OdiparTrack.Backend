@@ -7,16 +7,23 @@ import com.odipartrack.model.Route;
 import com.odipartrack.model.RutaPorPedido;
 import com.odipartrack.model.Sale;
 
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+
 @Service
 public class CamionService {
+
+    private static final Logger logger = LoggerFactory.getLogger(CamionService.class);
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -98,20 +105,35 @@ public class CamionService {
      * @param envios Listado de envíos en formato JSON.
      */
     public void actualizarSalidaCamiones(List<Envio> envios) {
+
         String sql = "CALL ActualizarSalidaCamion(?, ?)";
 
+        List<Object[]> batchArgs = new ArrayList<>();
         for (Envio envio : envios) {
-            try {
-                String codigoCamion = envio.getCamion().getCodigo();
-                Timestamp salidaMinima = Timestamp.valueOf(envio.getCamion().getSalida_minima());
-
-                jdbcTemplate.update(sql, codigoCamion, salidaMinima);
-                System.out
-                        .println("Actualizado Camión con código: " + codigoCamion + ", Salida mínima: " + salidaMinima);
-            } catch (Exception e) {
-                System.err.println("Error al actualizar el camión: " + envio.getCamion().getCodigo());
-                e.printStackTrace();
+            LocalDateTime salidaMinima = envio.getCamion().getSalida_minima();
+            if (salidaMinima == null) {
+                continue;
             }
+            batchArgs.add(new Object[] {
+                    envio.getCamion().getCodigo(),
+                    Timestamp.valueOf(salidaMinima)
+            });
         }
+        try {
+            int[] rowsUpdated = jdbcTemplate.batchUpdate(sql, batchArgs);
+            logger.info("Se actualizaron {} camiones.", rowsUpdated.length);
+        } catch (Exception e) {
+            logger.error("Error al actualizar las salidas mínimas de los camiones.", e);
+        }
+    }
+
+    /**
+     * Reinicia los camiones para iniciar de nuevo el Simulated Annealing.
+     *
+     * @param envios Listado de envíos en formato JSON.
+     */
+    public void reiniciarCamiones() {
+        String sql = "CALL ReiniciarCamiones()";
+        jdbcTemplate.update(sql);
     }
 }

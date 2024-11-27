@@ -31,8 +31,13 @@ public class CamionController {
         return ResponseEntity.ok(camiones);
     }
 
-    @PostMapping("/actualizar-salida")
+    @PostMapping("/actualizarSalida")
     public void actualizarSalidaCamiones(@RequestBody List<Envio> envios) {
         camionService.actualizarSalidaCamiones(envios);
+    }
+
+    @PostMapping("/reiniciarCamiones")
+    public void reiniciarCamiones() {
+        camionService.reiniciarCamiones();
     }
 }
