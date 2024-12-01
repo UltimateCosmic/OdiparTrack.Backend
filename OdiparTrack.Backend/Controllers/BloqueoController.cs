@@ -87,5 +87,23 @@ namespace OdiparTrack.Controllers
                 return BadRequest(new { success = false, message = "Error al leer los bloqueos." });
             }
         }
+
+        [HttpGet("leerPorFecha")]
+        public async Task<IActionResult> LeerBloqueosPorFecha([FromQuery] DateTime startDate)
+        {
+            try
+            {
+                // Llama al servicio para obtener los bloqueos por la fecha proporcionada
+                var bloqueos = await _bloqueoService.LeerBloqueosPorFechaAsync(startDate);
+
+                // Devuelve la respuesta como un objeto JSON
+                return Ok(new { success = true, data = bloqueos });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al leer los bloqueos por fecha");
+                return BadRequest(new { success = false, message = "Error al leer los bloqueos por fecha." });
+            }
+        }
     }
 }

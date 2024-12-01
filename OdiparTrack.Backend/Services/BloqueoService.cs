@@ -100,5 +100,69 @@ namespace OdiparTrack.Services
 
             return bloqueos;
         }
+
+        public async Task<List<Bloqueo>> LeerBloqueosPorFechaAsync(DateTime startDate)
+        {
+            var bloqueos = new List<Bloqueo>();
+
+            using (var conn = new MySqlConnection(_configuration.GetConnectionString("OdiparTrackDB")))
+            {
+                await conn.OpenAsync();
+
+                using (var cmd = new MySqlCommand("LeerBloqueosPorFecha", conn))
+                {
+                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.Parameters.AddWithValue("@start_datetime", startDate);
+
+                    using (var reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var bloqueo = new Bloqueo
+                            {
+                                Id = reader.GetInt32("id"),
+                                FechaInicio = reader.GetDateTime("Fecha_inicio"),
+                                FechaFin = reader.GetDateTime("Fecha_fin"),
+                                IdRuta = reader.GetInt32("idRuta"),
+                                Ruta = new Ruta
+                                {
+                                    Id = reader.GetInt32("idRuta"),
+                                    IdOrigen = reader.GetString("rutaOrigenUbigeo"),
+                                    Origen = new Oficina
+                                    {
+                                        Id = reader.GetInt32("origenId"),
+                                        Ubigeo = reader.GetString("rutaOrigenUbigeo"),
+                                        Capacidad = reader.IsDBNull("origenCapacidad") ? null : reader.GetInt32("origenCapacidad"),
+                                        Latitud = reader.IsDBNull("origenLatitud") ? null : reader.GetDecimal("origenLatitud"),
+                                        Longitud = reader.IsDBNull("origenLongitud") ? null : reader.GetDecimal("origenLongitud"),
+                                        Region = reader.GetString("origenRegion"),
+                                        Departamento = reader.GetString("origenDepartamento"),
+                                        Provincia = reader.GetString("origenProvincia")
+                                    },
+                                    IdDestino = reader.GetString("rutaDestinoUbigeo"),
+                                    Destino = new Oficina
+                                    {
+                                        Id = reader.GetInt32("destinoId"),
+                                        Ubigeo = reader.GetString("rutaDestinoUbigeo"),
+                                        Capacidad = reader.IsDBNull("destinoCapacidad") ? null : reader.GetInt32("destinoCapacidad"),
+                                        Latitud = reader.IsDBNull("destinoLatitud") ? null : reader.GetDecimal("destinoLatitud"),
+                                        Longitud = reader.IsDBNull("destinoLongitud") ? null : reader.GetDecimal("destinoLongitud"),
+                                        Region = reader.GetString("destinoRegion"),
+                                        Departamento = reader.GetString("destinoDepartamento"),
+                                        Provincia = reader.GetString("destinoProvincia")
+                                    },
+                                    Distancia = reader.IsDBNull("Distancia") ? null : reader.GetDecimal("Distancia"),
+                                    IdVelocidad = reader.IsDBNull("idVelocidad") ? null : reader.GetInt32("idVelocidad")
+                                }
+                            };
+
+                            bloqueos.Add(bloqueo);
+                        }
+                    }
+                }
+            }
+
+            return bloqueos;
+        }
     }
 }
