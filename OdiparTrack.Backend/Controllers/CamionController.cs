@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using OdiparTrack.Models;
 using OdiparTrack.Services;
 
@@ -72,6 +72,21 @@ namespace OdiparTrack.Controllers
             {
                 _logger.LogError(ex, "Error al leer los camiones");
                 return BadRequest(new { success = false, message = "Error al leer los camiones." });
+            }
+        }
+
+        [HttpPost("reiniciar")]
+        public async Task<IActionResult> ReiniciarCamiones()
+        {
+            try
+            {
+                await _camionService.ReiniciarCamiones();
+                return Ok(new { success = true, message = "Camiones reiniciados satisfactoriamente." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al reiniciar camiones");
+                return BadRequest(new { success = false, message = "Error al reiniciar camiones." });
             }
         }
     }
