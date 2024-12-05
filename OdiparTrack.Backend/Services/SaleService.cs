@@ -67,8 +67,6 @@ namespace OdiparTrack.Services
                 DateTime = reader["Fecha"] == DBNull.Value ? null : (DateTime?)reader["Fecha"]
             };
 
-            // Mapea oficinas de origen y destino, y otros detalles si es necesario
-            // Esto depende de cómo esté diseñado tu modelo de datos
 
             return sale;
         }
