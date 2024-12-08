@@ -75,19 +75,5 @@ namespace OdiparTrack.Controllers
             }
         }
 
-        [HttpPost("reiniciar")]
-        public async Task<IActionResult> ReiniciarCamiones()
-        {
-            try
-            {
-                await _camionService.ReiniciarCamiones();
-                return Ok(new { success = true, message = "Camiones reiniciados satisfactoriamente." });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al reiniciar camiones");
-                return BadRequest(new { success = false, message = "Error al reiniciar camiones." });
-            }
-        }
     }
 }
