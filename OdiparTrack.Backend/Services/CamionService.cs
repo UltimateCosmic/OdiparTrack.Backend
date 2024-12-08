@@ -85,18 +85,6 @@ namespace OdiparTrack.Services
             return camiones;
         }
 
-        public async Task ReiniciarCamiones()
-        {
-            using (MySqlConnection conn = new MySqlConnection(_configuration.GetConnectionString("OdiparTrackDB")))
-            {
-                await conn.OpenAsync();
-                using (MySqlCommand cmd = new MySqlCommand("ReiniciarCamiones", conn))
-                {
-                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
-
-                    await cmd.ExecuteNonQueryAsync();
-                }
-            }
-        }
+       
     }
 }
