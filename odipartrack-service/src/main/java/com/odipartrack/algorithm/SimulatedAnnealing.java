@@ -131,10 +131,6 @@ public class SimulatedAnnealing {
         // Distribuir las ventas entre los envíos
         for (Sale sale : sales) {
             i++;
-            if (i == 134) {
-                i++;
-                i--;
-            }
             Envio envio = findOrCreateEnvio(envios, sale, camiones, i);
 
             if (envio == null) {
@@ -636,7 +632,6 @@ public class SimulatedAnnealing {
                         ;
                     else {
                         totalFitness -= 1000;
-                        System.out.printf("\n se paso xd");
                     }
                 }
 
