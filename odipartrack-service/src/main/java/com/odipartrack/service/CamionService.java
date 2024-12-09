@@ -61,6 +61,7 @@ public class CamionService {
             camion.setCapacidad(rs.getInt("Capacidad"));
             if (rs.getTimestamp("SalidaMinima") != null) {
                 camion.setSalida_minima(rs.getTimestamp("SalidaMinima").toLocalDateTime());
+                camion.setSalida_minima_original(rs.getTimestamp("SalidaMinima").toLocalDateTime());
             }
 
             // Asignar datos de la oficina de origen
