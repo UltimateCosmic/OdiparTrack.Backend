@@ -10,7 +10,7 @@ public class Camion {
     private String codigo;
     private String idInicio;
     private Office inicio;
-    private int capacidad;   
+    private int capacidad;
     private LocalDateTime tiempo_nuevo_envio;
     private List<Sale> pedidos;
     private List<Route> rutas;
@@ -21,6 +21,7 @@ public class Camion {
     private List<Double> dist_Pedidos;
     private boolean utilizable;
     private boolean en_camino;
+    private LocalDateTime salida_minima_original;
 
     public Camion() {
         dem_Pedidos = new ArrayList<>();
@@ -36,6 +37,7 @@ public class Camion {
         this.pedidos = pedidos;
         this.en_camino = false;
         this.salida_minima = null;
+        this.salida_minima_original = null;
         this.dem_Pedidos = new ArrayList<>();
         this.dist_Pedidos = new ArrayList<>();
         this.setUtilizable(true);
@@ -168,5 +170,13 @@ public class Camion {
 
     public void setTiempo_nuevo_envio(LocalDateTime tiempo_nuevo_envio) {
         this.tiempo_nuevo_envio = tiempo_nuevo_envio;
+    }
+
+    public LocalDateTime getSalida_minima_original() {
+        return salida_minima_original;
+    }
+
+    public void setSalida_minima_original(LocalDateTime salida_minima_original) {
+        this.salida_minima_original = salida_minima_original;
     }
 }

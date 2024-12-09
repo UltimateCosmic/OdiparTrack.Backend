@@ -1,8 +1,5 @@
 package com.odipartrack.algorithm;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.AbstractMap;
@@ -134,6 +131,10 @@ public class SimulatedAnnealing {
         // Distribuir las ventas entre los envíos
         for (Sale sale : sales) {
             i++;
+            if (i == 134) {
+                i++;
+                i--;
+            }
             Envio envio = findOrCreateEnvio(envios, sale, camiones, i);
 
             if (envio == null) {
@@ -158,7 +159,9 @@ public class SimulatedAnnealing {
         // Buscar el primer envío con tiempo de llegada menor al tiempo límite y con
         // capacidad suficiente
         for (Envio envio : envios) {
-            if (envio.getTiempoLlegada() == null || envio.getTiempoLlegada().isBefore(tiempoLimite)) {
+            if ((envio.getTiempoLlegada() == null || envio.getTiempoLlegada().isBefore(tiempoLimite))
+                    && (envio.getCamion().getSalida_minima_original() == null
+                            || envio.getCamion().getSalida_minima_original().isBefore(sale.getDateTime()))) {
                 // Calcular el tiempo de llegada estimado
                 List<Sale> pedidos = envio.getCamion().getPedidos();
                 Office origen = pedidos.isEmpty() ? envio.getCamion().getInicio()
@@ -192,18 +195,20 @@ public class SimulatedAnnealing {
                 LocalDateTime menorTiempoLimite = tiempoLimite;
                 if (!pedidos.isEmpty()) {
                     Sale primerPedido = pedidos.get(0);
-                    LocalDateTime tiempoLimitePrimerPedido = primerPedido.getDateTime().plusHours(24);
+                    LocalDateTime tiempoLimitePrimerPedido = calcularTiempoLimite(primerPedido.getDateTime(),
+                            primerPedido.getDestination().getRegion());
                     if (tiempoLimitePrimerPedido.isBefore(menorTiempoLimite)) {
                         menorTiempoLimite = tiempoLimitePrimerPedido;
                     }
                 }
 
                 // Verificar si llega antes del tiempo límite y tiene capacidad suficiente
-                if (tiempoLlegadaEstimado.isBefore(menorTiempoLimite)
+                if ((tiempoLlegadaEstimado.isBefore(menorTiempoLimite)
+                        || tiempoLlegadaEstimado.isEqual(menorTiempoLimite))
                         && envio.getCapacidadRestante() >= sale.getQuantity()) {
                     envio.setTiempoLlegada(tiempoLlegadaEstimado);
                     envio.setDemora(nuevaDemora); // Actualizar la demora
-                    envio.getCamion().setFechaSalida(tiempoLlegadaEstimado.plusHours(2));
+                    envio.getCamion().setFechaSalida(tiempoLlegadaEstimado.plusHours(1));
                     // Actualizar salida_minima
                     if (!tramoExistente) {
                         envio.getCamion().getDem_Pedidos().add(nuevaDemora);
@@ -212,11 +217,12 @@ public class SimulatedAnnealing {
                         envio.getCamion().getRutas().addAll(result.getValue()); // Agregar las rutas al camión
                     } else {
                         envio.getCamion().getDist_Pedidos().add(0.0);
+                        envio.getCamion().getDem_Pedidos().add(0.0);
                     }
                     Office lima = findOfficeByCode(offices, "150101");
                     Office trujillo = findOfficeByCode(offices, "130101");
                     Office arequipa = findOfficeByCode(offices, "040101");
-
+                    List<Route> mejoresRutas = null;
                     Office destinoFinal = sale.getDestination();
                     Office mejorOficina = null;
                     double menorDistancia = Double.MAX_VALUE;
@@ -227,6 +233,7 @@ public class SimulatedAnnealing {
                     if (distanciaLima.getKey() < menorDistancia) {
                         menorDistancia = distanciaLima.getKey();
                         mejorOficina = lima;
+                        mejoresRutas = distanciaLima.getValue();
                     }
 
                     // Calcular la distancia a Trujillo
@@ -235,6 +242,7 @@ public class SimulatedAnnealing {
                     if (distanciaTrujillo.getKey() < menorDistancia) {
                         menorDistancia = distanciaTrujillo.getKey();
                         mejorOficina = trujillo;
+                        mejoresRutas = distanciaTrujillo.getValue();
                     }
 
                     // Calcular la distancia a Arequipa
@@ -243,11 +251,13 @@ public class SimulatedAnnealing {
                     if (distanciaArequipa.getKey() < menorDistancia) {
                         menorDistancia = distanciaArequipa.getKey();
                         mejorOficina = arequipa;
+                        mejoresRutas = distanciaArequipa.getValue();
                     }
 
                     // Actualizar el origen del camión con la mejor oficina encontrada
                     if (mejorOficina != null) {
                         envio.getCamion().setInicio(mejorOficina);
+                        envio.getCamion().getRutas().addAll(mejoresRutas);
                     }
                     return envio;
                 }
@@ -284,7 +294,7 @@ public class SimulatedAnnealing {
                     // Asignar tiempos y demora al nuevo envío
                     nuevoEnvio.setTiempoLlegada(tiempoLlegadaEstimado);
                     nuevoEnvio.setDemora(nuevaDemora);
-                    nuevoEnvio.getCamion().setFechaSalida(tiempoLlegadaEstimado.plusHours(2));
+                    nuevoEnvio.getCamion().setFechaSalida(tiempoLlegadaEstimado.plusHours(1));
                     nuevoCamion.getDem_Pedidos().add(nuevaDemora); // Inicializar la lista de demoras con la nueva
                                                                    // demora
                     nuevoCamion.getDist_Pedidos().add(distancia); // Inicializar la lista de distancias con la nueva
@@ -504,8 +514,8 @@ public class SimulatedAnnealing {
                                 LocalDateTime tiempoLlegadaEstimado = envio.getTiempoSalida()
                                         .plusHours((long) tiempoTotal);
                                 envio.setTiempoLlegada(tiempoLlegadaEstimado);
-                                nuevoCamion.setFechaSalida(tiempoLlegadaEstimado.plusHours(2));
-                                camion.setFechaSalida(tiempoLlegadaEstimado.plusHours(2));
+                                nuevoCamion.setFechaSalida(tiempoLlegadaEstimado.plusHours(1));
+                                camion.setFechaSalida(tiempoLlegadaEstimado.plusHours(1));
                                 envio.setDemora(tiempoTotal);
                                 camion_final = camion;
                             }
@@ -531,13 +541,15 @@ public class SimulatedAnnealing {
                     Office destinoFinal = sale.getDestination();
                     Office mejorOficina = null;
                     double menorDistancia = Double.MAX_VALUE;
-
+                    List<Route> mejoresRutas = null;
                     // Calcular la distancia a Lima
                     Map.Entry<Double, List<Route>> distanciaLima = calculateRouteDistance(destinoFinal, lima,
                             envio.getTiempoLlegada());
                     if (distanciaLima.getKey() < menorDistancia) {
                         menorDistancia = distanciaLima.getKey();
                         mejorOficina = lima;
+                        mejoresRutas = distanciaLima.getValue();
+
                     }
 
                     // Calcular la distancia a Trujillo
@@ -546,6 +558,7 @@ public class SimulatedAnnealing {
                     if (distanciaTrujillo.getKey() < menorDistancia) {
                         menorDistancia = distanciaTrujillo.getKey();
                         mejorOficina = trujillo;
+                        mejoresRutas = distanciaTrujillo.getValue();
                     }
 
                     // Calcular la distancia a Arequipa
@@ -554,12 +567,14 @@ public class SimulatedAnnealing {
                     if (distanciaArequipa.getKey() < menorDistancia) {
                         menorDistancia = distanciaArequipa.getKey();
                         mejorOficina = arequipa;
+                        mejoresRutas = distanciaArequipa.getValue();
                     }
 
                     // Actualizar el origen del camión con la mejor oficina encontrada
                     if (mejorOficina != null) {
                         envio.getCamion().setInicio(mejorOficina);
                         camion_final.setInicio(mejorOficina);
+                        envio.getCamion().getRutas().addAll(mejoresRutas);
                     }
                 }
             }
@@ -575,7 +590,7 @@ public class SimulatedAnnealing {
             avl = 0;
             f++;
             List<Sale> pedidos = envio.getCamion().getPedidos();
-            LocalDateTime tiempoSalida = envio.getTiempoSalida();
+
             List<Double> demoras = envio.getCamion().getDem_Pedidos();
             if (f == 20) {
                 f++;
@@ -586,7 +601,7 @@ public class SimulatedAnnealing {
                     LocalDateTime tiempoLimite = calcularTiempoLimite(sale.getDateTime(),
                             sale.getDestination().getRegion());
                     double demora = demoras.get(i);
-
+                    LocalDateTime tiempoSalida = sale.getDateTime();
                     // Verificar si la ruta ya está en la lista de rutas del camión
                     Office origen = (i == 0) ? envio.getCamion().getInicio() : pedidos.get(i - 1).getDestination();
                     boolean tramoExistente = envio.getCamion().getRutas().stream()
@@ -606,16 +621,32 @@ public class SimulatedAnnealing {
                         }
 
                     }
+                    if (diferencia < 0)
+                        diferencia *= 1000;
 
                     avl += diferencia;
                     totalFitness += diferencia;
                 }
+
+                if (envio.getCamion().getSalida_minima_original() == null)
+                    ;
+                else {
+                    if (envio.getCamion().getPedidos().get(0).getDateTime()
+                            .isAfter(envio.getCamion().getSalida_minima_original()))
+                        ;
+                    else {
+                        totalFitness -= 1000;
+                        System.out.printf("\n se paso xd");
+                    }
+                }
+
+                totalFitness -= 0.8 * envio.getCapacidadRestante();
+            } else {
+                totalFitness += 50;
             }
             envio.setSolucion(avl);
         }
-        if (totalFitness < 100000000000000.00) {
-            totalFitness = totalFitness + 0.1;
-        }
+
         return totalFitness;
     }
 
@@ -774,6 +805,7 @@ public class SimulatedAnnealing {
                 }
             }
         }
+
         return neighbor;
     }
 
@@ -850,11 +882,21 @@ public class SimulatedAnnealing {
         envio.setTiempoSalida(tiempoSalida);
         envio.setTiempoLlegada(tiempoLlegadaEstimado);
         envio.setDemora(demoraAcumulada);
-        camion.setSalida_minima(tiempoLlegadaEstimado.plusHours(2));
+        camion.setSalida_minima(tiempoLlegadaEstimado.plusHours(1));
+        Office origenCamion = envio.getCamion().getInicio();
+        Office destinoFinal = envio.getCamion().getPedidos().get(envio.getCamion().getPedidos().size() - 1)
+                .getDestination();
+
+        List<Route> rutasHaciaOrigen = calculateRouteDistance(destinoFinal, origenCamion, tiempoLlegadaEstimado)
+                .getValue();
+
+        // Agregar las rutas calculadas a la lista de rutas del camión
+        if (rutasHaciaOrigen != null && !rutasHaciaOrigen.isEmpty()) {
+            envio.getCamion().getRutas().addAll(rutasHaciaOrigen);
+        }
 
     }
 
-    // Determinar si se debe aceptar la nueva solución
     private boolean shouldAcceptSolution(double currentFitness, double neighborFitness) {
         if (neighborFitness > currentFitness) {
             return true; // Aceptar si es una mejor solución
@@ -867,6 +909,7 @@ public class SimulatedAnnealing {
         if (temperature > 100) { // Ajusta el umbral según la necesidad
             acceptanceProbability *= 1.5; // Incrementa la probabilidad de aceptar
         }
+
         return acceptanceProbability < random.nextDouble();
     }
 
@@ -971,18 +1014,5 @@ public class SimulatedAnnealing {
             }
         }
         return null;
-    }
-
-    public static void escribirProximosEnvios(List<Envio> bestSolution) {
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter("proxenvios.txt"))) {
-            for (Envio envio : bestSolution) {
-                String codigoCamion = envio.getCamion().getCodigo();
-                LocalDateTime tiempoSalida = envio.getCamion().getSalida_minima();
-                writer.write("Código del camión: " + codigoCamion + ", Fecha de próxima salida: " + tiempoSalida);
-                writer.newLine();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 }
