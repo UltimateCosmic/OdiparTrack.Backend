@@ -251,7 +251,7 @@ public class SaleService {
                 continue;
             try {
                 Sale pedido = parsearLinea(linea, anio, mes, oficinas);
-                
+
                 System.out.println("===================================================");
                 System.out.println("ID Origen: " + pedido.getIdOrigin());
                 System.out.println("ID Destino: " + pedido.getIdDestination());
@@ -317,22 +317,23 @@ public class SaleService {
      */
     private void guardarPedidoEnBD(Sale sale) {
         String sql = "INSERT INTO Pedidos (idOrigen, idDestino, Cantidad, Cliente, Fecha) " +
-            "VALUES (?, ?, ?, ?, ?)";
+                "VALUES (?, ?, ?, ?, ?)";
         if (sale.getIdOrigin() == 0) {
             sql = "INSERT INTO Pedidos (idDestino, Cantidad, Cliente, Fecha) " +
-                "VALUES (?, ?, ?, ?)";
+                    "VALUES (?, ?, ?, ?)";
             jdbcTemplate.update(sql,
-                sale.getIdDestination(),
-                sale.getQuantity(),
-                sale.getClientId(),
-                sale.getDateTime().toLocalDate());
+                    sale.getIdDestination(),
+                    sale.getQuantity(),
+                    sale.getClientId(),
+                    sale.getDateTime()); // Inserta LocalDateTime directamente
         } else {
             jdbcTemplate.update(sql,
-                sale.getIdOrigin(),
-                sale.getIdDestination(),
-                sale.getQuantity(),
-                sale.getClientId(),
-                sale.getDateTime().toLocalDate());
+                    sale.getIdOrigin(),
+                    sale.getIdDestination(),
+                    sale.getQuantity(),
+                    sale.getClientId(),
+                    sale.getDateTime()); // Inserta LocalDateTime directamente
         }
     }
+
 }
