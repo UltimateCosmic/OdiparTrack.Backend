@@ -50,13 +50,14 @@ public class SimulatedAnnealingController {
         List<Office> offices = officeService.obtenerOficinas();
         List<Velocidad> velocidades = velocidadService.obtenerVelocidades();
         List<Route> routes = routeService.obtenerRutas();
+        calcularTiemposRutas(routes);
+
         List<Block> bloqueos = bloqueoService.obtenerBloqueos();
         List<Sale> sales = saleService.obtenerPedidosPorFecha(startDatetime);
         List<Camion> camiones = camionService.obtenerCamiones();
         List<Envio> envios = envioService.obtenerEnvios();
 
         // Asignar distancia y filtrar bloqueos por pedidos
-        leerDistanciasRutas(routes);
         bloqueos = filtrarBloqueos(bloqueos, sales);
 
         // Planificación de envios (front)
@@ -108,5 +109,11 @@ public class SimulatedAnnealingController {
                         * Math.sin(lonDistance / 2) * Math.sin(lonDistance / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return R * c; // Distancia en kilómetros
+    }
+
+    private void calcularTiemposRutas(List<Route> routes) {
+        for (Route route : routes) {
+            route.calculateTime();
+        }
     }
 }
