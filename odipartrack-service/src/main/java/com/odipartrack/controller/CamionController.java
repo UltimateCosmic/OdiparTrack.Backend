@@ -37,15 +37,8 @@ public class CamionController {
     }
 
     @PostMapping("/reiniciarCamiones")
-    public ResponseEntity<String> reiniciarCamiones() {
-        System.out.println("El método reiniciarCamiones fue llamado exitosamente.");
-        try {
-            camionService.reiniciarCamiones();
-            return ResponseEntity.ok("Camiones reiniciados correctamente.");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body("Error al reiniciar camiones: " + e.getMessage());
-        }
+    public void reiniciarCamiones() {
+        camionService.reiniciarCamiones();
     }
 
 }
