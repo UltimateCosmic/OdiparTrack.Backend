@@ -5,6 +5,7 @@ import com.odipartrack.service.SaleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,5 +36,15 @@ public class SaleController {
     public ResponseEntity<List<Sale>> obtenerPedidos() {
         List<Sale> pedidos = saleService.obtenerPedidos();
         return ResponseEntity.ok(pedidos);
+    }    
+
+    @PostMapping("/procesar")
+    public ResponseEntity<String> procesarArchivos() {
+        try {
+            int totalRegistros = saleService.procesarArchivosPedidos();
+            return ResponseEntity.ok("Procesamiento completo. Total de registros insertados: " + totalRegistros);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error durante el procesamiento: " + e.getMessage());
+        }
     }
 }
