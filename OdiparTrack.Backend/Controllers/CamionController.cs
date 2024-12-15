@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using OdiparTrack.Models;
 using OdiparTrack.Services;
 
@@ -74,5 +74,6 @@ namespace OdiparTrack.Controllers
                 return BadRequest(new { success = false, message = "Error al leer los camiones." });
             }
         }
+
     }
 }

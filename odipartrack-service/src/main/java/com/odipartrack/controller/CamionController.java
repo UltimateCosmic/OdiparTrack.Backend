@@ -40,4 +40,5 @@ public class CamionController {
     public void reiniciarCamiones() {
         camionService.reiniciarCamiones();
     }
+
 }

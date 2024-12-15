@@ -1,4 +1,4 @@
-﻿using MySql.Data.MySqlClient;
+using MySql.Data.MySqlClient;
 using OdiparTrack.Models;
 using System.Data;
 
@@ -22,13 +22,12 @@ namespace OdiparTrack.Services
                 {
                     cmd.CommandType = System.Data.CommandType.StoredProcedure;
 
-                    // Agregar parámetros al Stored Procedure
                     cmd.Parameters.AddWithValue("pCodigo", codigo);
                     cmd.Parameters.AddWithValue("pIdOrigen", idOrigen);
                     cmd.Parameters.AddWithValue("pCapacidad", capacidad);
                     cmd.Parameters.AddWithValue("pTiempo_nuevo_envio", tiempoNuevoEnvio);
 
-                    await cmd.ExecuteNonQueryAsync();  // Ejecuta el Stored Procedure
+                    await cmd.ExecuteNonQueryAsync();
                 }
             }
         }
@@ -42,14 +41,13 @@ namespace OdiparTrack.Services
                 {
                     cmd.CommandType = System.Data.CommandType.StoredProcedure;
 
-                    // Agregar parámetros al Stored Procedure
                     cmd.Parameters.AddWithValue("pIdCamion", idCamion);
                     cmd.Parameters.AddWithValue("pCodigo", codigo);
                     cmd.Parameters.AddWithValue("pIdOrigen", idOrigen);
                     cmd.Parameters.AddWithValue("pCapacidad", capacidad);
                     cmd.Parameters.AddWithValue("pTiempo_nuevo_envio", tiempoNuevoEnvio.HasValue ? (object)tiempoNuevoEnvio.Value : DBNull.Value);
 
-                    await cmd.ExecuteNonQueryAsync();  // Ejecuta el Stored Procedure
+                    await cmd.ExecuteNonQueryAsync();
                 }
             }
         }
@@ -86,5 +84,7 @@ namespace OdiparTrack.Services
 
             return camiones;
         }
+
+       
     }
 }
