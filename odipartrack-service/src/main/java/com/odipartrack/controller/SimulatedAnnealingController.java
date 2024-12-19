@@ -41,7 +41,7 @@ public class SimulatedAnnealingController {
     private EnvioService envioService;
 
     @PostMapping("/best-solution")
-    public List<Envio> getBestSolution(@RequestParam("fechaHora") String fechaHora) {
+    public List<Envio> getBestSolution(@RequestParam("fechaHora") String fechaHora, @RequestParam("intervalo") int intervalo) {
 
         // Parsear la fecha y hora del parámetro
         LocalDateTime startDatetime = LocalDateTime.parse(fechaHora);
@@ -53,7 +53,7 @@ public class SimulatedAnnealingController {
         calcularTiemposRutas(routes);
 
         List<Block> bloqueos = bloqueoService.obtenerBloqueos();
-        List<Sale> sales = saleService.obtenerPedidosPorFecha(startDatetime);
+        List<Sale> sales = saleService.obtenerPedidosPorFechaConIntervalo(startDatetime, intervalo);
         List<Camion> camiones = camionService.obtenerCamiones();
         List<Envio> envios = envioService.obtenerEnvios();
 

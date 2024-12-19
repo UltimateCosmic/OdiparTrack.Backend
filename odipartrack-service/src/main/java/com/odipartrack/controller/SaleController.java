@@ -32,6 +32,13 @@ public class SaleController {
         return ResponseEntity.ok(pedidos);
     }
 
+    @GetMapping("/leerPorFechaConIntervalo")
+    public ResponseEntity<List<Sale>> obtenerPedidosPorFechaConIntervalo(@RequestParam("fechaHoraInicio") String fechaHoraInicio, @RequestParam("intervalo") String intervalo) {
+        LocalDateTime fechaInicio = LocalDateTime.parse(fechaHoraInicio);
+        List<Sale> pedidos = saleService.obtenerPedidosPorFechaConIntervalo(fechaInicio, Integer.parseInt(intervalo));        
+        return ResponseEntity.ok(pedidos);
+    }
+
     @GetMapping("/leer")
     public ResponseEntity<List<Sale>> obtenerPedidos() {
         List<Sale> pedidos = saleService.obtenerPedidos();
