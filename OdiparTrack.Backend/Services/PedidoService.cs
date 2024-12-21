@@ -13,48 +13,27 @@ namespace OdiparTrack.Services
             _configuration = configuration;
         }
 
-        public async Task InsertarPedido(int idOrigen, int idDestino, int cantidad, string cliente, int idEnvio)
+        public async Task InsertarPedido(int? idOrigen, int idDestino, int cantidad, DateTime fecha)
         {
             using (MySqlConnection conn = new MySqlConnection(_configuration.GetConnectionString("OdiparTrackDB")))
             {
                 await conn.OpenAsync();
-                using (MySqlCommand cmd = new MySqlCommand("InsertarPedido", conn))
+                using (MySqlCommand cmd = new MySqlCommand("InsertarPedidoConFecha", conn))
                 {
-                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
+                    cmd.CommandType = CommandType.StoredProcedure;
 
                     // Agregar parámetros al Stored Procedure
-                    cmd.Parameters.AddWithValue("pIdOrigen", idOrigen);
+                    cmd.Parameters.AddWithValue("pIdOrigen", idOrigen.HasValue ? (object)idOrigen.Value : DBNull.Value);
                     cmd.Parameters.AddWithValue("pIdDestino", idDestino);
                     cmd.Parameters.AddWithValue("pCantidad", cantidad);
-                    cmd.Parameters.AddWithValue("pCliente", cliente);
-                    cmd.Parameters.AddWithValue("pIdEnvio", idEnvio);
+                    cmd.Parameters.AddWithValue("pFecha", fecha);
 
                     await cmd.ExecuteNonQueryAsync();  // Ejecuta el Stored Procedure
                 }
             }
         }
 
-        public async Task ActualizarPedido(int idPedido, int idOrigen, int idDestino, int cantidad, string cliente, int idEnvio)
-        {
-            using (MySqlConnection conn = new MySqlConnection(_configuration.GetConnectionString("OdiparTrackDB")))
-            {
-                await conn.OpenAsync();
-                using (MySqlCommand cmd = new MySqlCommand("ActualizarPedido", conn))
-                {
-                    cmd.CommandType = System.Data.CommandType.StoredProcedure;
-
-                    // Agregar parámetros al Stored Procedure
-                    cmd.Parameters.AddWithValue("pIdPedido", idPedido);
-                    cmd.Parameters.AddWithValue("pIdOrigen", idOrigen);
-                    cmd.Parameters.AddWithValue("pIdDestino", idDestino);
-                    cmd.Parameters.AddWithValue("pCantidad", cantidad);
-                    cmd.Parameters.AddWithValue("pCliente", cliente);
-                    cmd.Parameters.AddWithValue("pIdEnvio", idEnvio);
-
-                    await cmd.ExecuteNonQueryAsync();  // Ejecuta el Stored Procedure
-                }
-            }
-        }
+        
 
         public async Task EliminarPedido(int idPedido)
         {
@@ -69,6 +48,28 @@ namespace OdiparTrack.Services
                     cmd.Parameters.AddWithValue("pIdPedido", idPedido);
 
                     await cmd.ExecuteNonQueryAsync();  // Ejecuta el Stored Procedure
+                }
+            }
+        }
+
+        public async Task ActualizarPedido(int idPedido, int? idOrigen, int idDestino, int cantidad, string cliente, int idEnvio)
+        {
+            using (MySqlConnection conn = new MySqlConnection(_configuration.GetConnectionString("OdiparTrackDB")))
+            {
+                await conn.OpenAsync();
+                using (MySqlCommand cmd = new MySqlCommand("ActualizarPedido", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+
+                    // Agregar parámetros al Stored Procedure
+                    cmd.Parameters.AddWithValue("pIdPedido", idPedido);
+                    cmd.Parameters.AddWithValue("pIdOrigen", idOrigen.HasValue ? idOrigen.Value : DBNull.Value); // Manejo de nulos
+                    cmd.Parameters.AddWithValue("pIdDestino", idDestino);
+                    cmd.Parameters.AddWithValue("pCantidad", cantidad);
+                    cmd.Parameters.AddWithValue("pCliente", cliente);
+                    cmd.Parameters.AddWithValue("pIdEnvio", idEnvio);
+
+                    await cmd.ExecuteNonQueryAsync(); // Ejecuta el Stored Procedure
                 }
             }
         }

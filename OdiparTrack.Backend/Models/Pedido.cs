@@ -5,7 +5,7 @@ namespace OdiparTrack.Models
     public class Pedido
     {
         public int Id { get; set; }
-        public int IdOrigen { get; set; }
+        public int? IdOrigen { get; set; }
         public Oficina? Origen { get; set; }
         public int IdDestino { get; set; }
         public Oficina? Destino { get; set; }

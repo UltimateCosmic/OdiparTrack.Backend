@@ -69,24 +69,30 @@ public class SimulatedAnnealingController {
 
     private List<Block> filtrarBloqueos(List<Block> bloqueos, List<Sale> sales) {
 
+        // Verificar si la lista de ventas está vacía
+        if (sales == null || sales.isEmpty()) {
+            System.err.println("La lista de ventas está vacía. No se pueden filtrar bloqueos.");
+            return new ArrayList<>(); // Retornar una lista vacía
+        }
+    
         LocalDateTime firstSaleDate = sales.get(0).getDateTime();
         LocalDateTime lastSaleDate = sales.get(sales.size() - 1).getDateTime();
         List<Block> bloqueosFiltrados = new ArrayList<>();
-
+    
         for (Block bloqueo : bloqueos) {
-
             LocalDateTime startDateTime = bloqueo.getStart();
             LocalDateTime endDateTime = bloqueo.getEnd();
-
+    
             if ((firstSaleDate.isAfter(startDateTime) && firstSaleDate.isBefore(endDateTime)) ||
                     (lastSaleDate.isAfter(startDateTime) && lastSaleDate.isBefore(endDateTime)) ||
                     (startDateTime.isAfter(firstSaleDate) && endDateTime.isBefore(lastSaleDate))) {
                 bloqueosFiltrados.add(bloqueo);
-
             }
         }
+    
         return bloqueosFiltrados;
     }
+    
 
     private void leerDistanciasRutas(List<Route> rutas) {
         for (Route route : rutas) {

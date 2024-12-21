@@ -23,11 +23,10 @@ namespace OdiparTrack.Controllers
             try
             {
                 await _pedidoService.InsertarPedido(
-                    pedido.IdOrigen,
+                    pedido.IdOrigen == 0 ? null : pedido.IdOrigen,
                     pedido.IdDestino,
-                    pedido.Cantidad.Value,
-                    pedido.Cliente,
-                    pedido.IdEnvio.Value
+                    pedido.Cantidad ?? 0,
+                    pedido.fecha
                 );
 
                 return Ok(new { success = true, message = "Pedido insertado satisfactoriamente." });
@@ -44,9 +43,12 @@ namespace OdiparTrack.Controllers
         {
             try
             {
+                // Maneja IdOrigen como nullable
+                int? idOrigen = pedido.IdOrigen;
+
                 await _pedidoService.ActualizarPedido(
                     pedido.Id,
-                    pedido.IdOrigen,
+                    idOrigen.HasValue ? idOrigen.Value : (int?)null, // Manejo del valor nullable
                     pedido.IdDestino,
                     pedido.Cantidad.Value,
                     pedido.Cliente,

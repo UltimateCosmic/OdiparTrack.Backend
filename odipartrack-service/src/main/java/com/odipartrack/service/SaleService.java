@@ -42,6 +42,7 @@ public class SaleService {
 
             // Asignar datos básicos del pedido
             Sale sale = new Sale();
+
             sale.setId(rs.getInt("id"));
             sale.setIdOrigin(rs.getInt("idOrigen"));
             sale.setIdDestination(rs.getInt("idDestino"));
@@ -192,25 +193,23 @@ public class SaleService {
     }
 
     /**
-     * Llama al Stored Procedure LeerPedidosPorFechaConIntervalo y devuelve todos los pedidos.
+     * Llama al Stored Procedure LeerPedidosPorFechaConIntervalo y devuelve todos
+     * los pedidos.
      *
      * @return Lista de objetos Sale.
      */
     @SuppressWarnings("deprecation")
     public List<Sale> obtenerPedidosPorFechaConIntervalo(LocalDateTime fechaHoraInicio, int intervalo) {
         String sql = "CALL LeerPedidosPorFechaConIntervalo(?, ?)";
+        System.out.println(fechaHoraInicio);
 
         return jdbcTemplate.query(sql, new Object[] { Timestamp.valueOf(fechaHoraInicio), intervalo }, (rs, rowNum) -> {
 
             // Asignar datos básicos del pedido
             Sale sale = new Sale();
             sale.setId(rs.getInt("id"));
-            sale.setIdOrigin(rs.getInt("idOrigen"));
-            sale.setIdDestination(rs.getInt("idDestino"));
             sale.setQuantity(rs.getInt("Cantidad"));
             sale.setClientId(rs.getString("Cliente"));
-            sale.setIdEnvio(rs.getInt("idEnvio"));
-            sale.setIdCamion(rs.getInt("idCamion"));
             sale.setDateTime(getLocalDateTime(rs, "Fecha"));
 
             // Asignar datos de la oficina de origen
